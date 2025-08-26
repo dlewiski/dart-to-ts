@@ -3,6 +3,8 @@
  * Each prompt is designed to return structured JSON data
  */
 
+import { SchemaDefinition } from './types';
+
 export const analysisPrompts = {
   /**
    * Analyze the main application entry point
@@ -192,7 +194,7 @@ Return ONLY the JSON object, no explanation.`;
 export function createCustomPrompt(
   instruction: string,
   code: string,
-  schema: any
+  schema: SchemaDefinition
 ): string {
   return `
 ${instruction}

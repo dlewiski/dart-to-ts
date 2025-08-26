@@ -1,40 +1,41 @@
 # Dart Application Functional Analysis Report
 
 ## Application Purpose
-A web-based release dashboard application for tracking and managing software releases
+A web dashboard application for tracking and displaying software release information and dependencies
 
 ## Core Features
-- Set up browser transport platform
-- Remove loading frame
-- Configure environment-based services
+- Configure transport platform for browser
+- Remove loading frame from DOM
+- Determine development vs production environment
 - Initialize ReleaseDashboard component
-- View application versions and packages in expandable cards
-- Select/deselect apps from dropdown with checkboxes
-- Save current search selection as a bookmark
-- Expand/collapse accordion sections to view package details
+- View app deployment information
+- Expand/collapse package details
+- Select/deselect apps from dropdown
+- Save current search as bookmark
+- Enter bookmark name
 
 ## User Workflows
 
 ### User Interactions
-1. onClick handlers for accordion expansion
-2. onClick handlers for checkbox selection/deselection
-3. onClick handler for bookmark button
-4. onChange handler for bookmark name input
-5. onClose handler for bookmark menu
+1. Click accordion to expand/collapse
+2. Click checkboxes to select apps
+3. Click Save Search button
+4. Type in bookmark name field
+5. Click Save bookmark button
 
 ## Data Architecture
 ### Sources
-- HTTP service endpoints
-- Mock data sources
+- Package dependency API
+- FEWS service API
 
 ### Transformations
-- fetchForPackage async operation
+- GET requests for package dependencies
 
 ### Destinations
 - API responses
 
 ## State Management
-- **Pattern**: fetchDashboardDataMiddleware - dispatches FetchAppsForDeployAction for all deploys, fetchAppsForDeployMiddleware - async API calls to FewsService, applyBookmarkMiddleware - applies bookmark selections and updates URL, filterUrlMiddleware - syncs filter/selection state to URL query parameters, urlStateSyncMiddleware - restores state from URL on initialization, clearAllFiltersMiddleware - clears all filters and updates URL
+- **Pattern**: fetchDashboardDataMiddleware, fetchAppsForDeployMiddleware, applyBookmarkMiddleware, filterUrlMiddleware, urlStateSyncMiddleware, clearAllFiltersMiddleware
 - **Key Actions**: FetchDashboardDataAction, FetchAppsForDeployAction, FetchedAppsForDeployAction, FailedFetchAppsForDeployAction, QueryUpdatedAction, AddRecentSearchAction, AddBookmarkAction, RemoveBookmarkAction, SelectDeployAction, SelectAppAction, DeselectDeployAction, DeselectAppAction, SetSelectedDeploysAction, SetSelectedAppsAction, ClearAllFiltersAction, UpdateClearFiltersCounterAction, ApplyBookmarkAction, SetViewModeAction, SetVersionThresholdAction, ClearVersionThresholdAction
 - **Selectors**: appSelector, appNamesSelector, appVersionSelector, hasFetchingDeployErrorSelector, appDependenciesSelector, packageNamesSelector, packagesSelector, packageSelector, packageVersionSelector, packageDependenciesSelector, selectedDeploysSelector, appsForSelectedDeploysSelector, selectedAppsSelector, fetchAllAppsSelector
 
@@ -52,16 +53,12 @@ A web-based release dashboard application for tracking and managing software rel
 - **built_collection** → immutable
 - **collection** → lodash
 - **fluri** → url-parse
-- **meta** → TypeScript decorators/annotations
+- **meta** → TypeScript built-in
 - **w_transport** → axios
 - **build_runner** → vite
-- **build_web_compilers** → typescript
+- **build_web_compilers** → vite + TypeScript
 - **glob** → glob
-- **built_value_generator** → TypeScript compiler
-- **dart_dev** → npm scripts
-- **dependency_validator** → npm audit
-- **workiva_analysis_options** → eslint + prettier
-- **over_react_format** → prettier + eslint-plugin-react
+- **dependency_validator** → npm-check-updates
 
 ## Conversion Strategy
 Based on this analysis, the TypeScript conversion should:

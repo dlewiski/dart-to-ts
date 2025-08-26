@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { CacheOptions, CachedResponse, UsageInfo, TIMEOUTS } from '../types';
 
 /**
  * Cache for Claude responses to avoid redundant API calls
@@ -22,7 +23,7 @@ export class ResponseCache {
   /**
    * Generate a cache key from prompt
    */
-  private getCacheKey(prompt: string, options?: any): string {
+  private getCacheKey(prompt: string, options?: CacheOptions): string {
     const content = JSON.stringify({ prompt, options });
     return crypto.createHash('md5').update(content).digest('hex');
   }
@@ -30,7 +31,7 @@ export class ResponseCache {
   /**
    * Get cached response if available and not expired
    */
-  get(prompt: string, options?: any): any | null {
+  get<T = unknown>(prompt: string, options?: CacheOptions): T | null {
     const key = this.getCacheKey(prompt, options);
     const cachePath = path.join(this.cacheDir, `${key}.json`);
     
@@ -39,7 +40,7 @@ export class ResponseCache {
     }
     
     try {
-      const cached = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
+      const cached: CachedResponse = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
       const age = Date.now() - cached.timestamp;
       
       if (age > this.ttl) {
@@ -48,7 +49,7 @@ export class ResponseCache {
         return null;
       }
       
-      return cached.response;
+      return cached.response as T;
     } catch (e) {
       return null;
     }
@@ -57,15 +58,14 @@ export class ResponseCache {
   /**
    * Store response in cache
    */
-  set(prompt: string, response: any, options?: any): void {
+  set(prompt: string, response: unknown, options?: CacheOptions): void {
     const key = this.getCacheKey(prompt, options);
     const cachePath = path.join(this.cacheDir, `${key}.json`);
     
-    const cacheData = {
+    const cacheData: CachedResponse = {
       timestamp: Date.now(),
-      prompt,
-      options,
-      response
+      response,
+      metadata: options
     };
     
     fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
@@ -172,7 +172,7 @@ export class ProgressIndicator {
 /**
  * Validate and clean JSON responses from Claude
  */
-export function cleanJsonResponse(text: string): any {
+export function cleanJsonResponse(text: string): unknown {
   // Remove markdown code blocks
   text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
   
@@ -223,11 +223,7 @@ export function estimateTokens(text: string): number {
 /**
  * Format token usage and cost information
  */
-export function formatUsageInfo(usage: {
-  inputTokens?: number;
-  outputTokens?: number;
-  cost?: number;
-}): string {
+export function formatUsageInfo(usage: UsageInfo): string {
   const parts = [];
   
   if (usage.inputTokens) {
@@ -239,7 +235,11 @@ export function formatUsageInfo(usage: {
   }
   
   if (usage.cost) {
-    parts.push(`Cost: $${usage.cost.toFixed(4)}`);
+    // Cost is already a string from UsageInfo type
+    const costStr = usage.cost;
+    // Add $ if not present
+    const formattedCost = costStr.startsWith('$') ? costStr : `$${costStr}`;
+    parts.push(`Cost: ${formattedCost}`);
   }
   
   return parts.join(' | ');
@@ -248,21 +248,18 @@ export function formatUsageInfo(usage: {
 /**
  * Extract token usage and cost from Claude CLI JSON output
  */
-export function extractUsageInfo(jsonResponse: any): {
-  inputTokens?: number;
-  outputTokens?: number;
-  cost?: number;
-} {
+export function extractUsageInfo(jsonResponse: unknown): UsageInfo {
   if (!jsonResponse || typeof jsonResponse !== 'object') {
     return {};
   }
   
-  const usage = jsonResponse.usage || {};
-  const cost = jsonResponse.total_cost_usd;
+  const response = jsonResponse as any; // Type assertion for accessing properties
+  const usage = response.usage || {};
+  const cost = response.total_cost_usd;
   
   return {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
-    cost
+    cost: cost ? String(cost) : undefined
   };
 }

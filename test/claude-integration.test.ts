@@ -9,7 +9,7 @@ async function testBasicPrompt() {
   console.log('📝 Test 1: Basic prompt execution');
   
   const result = await executeClaude('What is 15 + 27? Return only the number.', {
-    model: 'haiku', // Use faster model for tests
+    model: 'sonnet', // Use sonnet model for tests
     maxRetries: 1
   });
   
@@ -18,7 +18,7 @@ async function testBasicPrompt() {
     return false;
   }
   
-  const answer = parseInt(result.result.trim());
+  const answer = parseInt(String(result.result).trim());
   const success = answer === 42;
   console.log(`   Result: ${result.result}`);
   console.log(`   ${success ? '✅' : '❌'} Test ${success ? 'passed' : 'failed'}`);
@@ -68,10 +68,11 @@ Return ONLY the JSON object.`;
     maxRetries: 2
   });
   
-  const success = result && 
-                  result.className === 'Dashboard' &&
-                  Array.isArray(result.methods) &&
-                  Array.isArray(result.properties);
+  const typedResult = result as any;
+  const success = typedResult && 
+                  typedResult.className === 'Dashboard' &&
+                  Array.isArray(typedResult.methods) &&
+                  Array.isArray(typedResult.properties);
   
   console.log('   Result:', JSON.stringify(result, null, 2));
   console.log(`   ${success ? '✅' : '❌'} Test ${success ? 'passed' : 'failed'}`);
@@ -114,7 +115,7 @@ Here is the JSON you requested:
 `;
   
   try {
-    const cleaned = cleanJsonResponse(messyResponse);
+    const cleaned = cleanJsonResponse(messyResponse) as any;
     const success = cleaned.test === 'value' && cleaned.number === 123;
     console.log('   Cleaned:', cleaned);
     console.log(`   ${success ? '✅' : '❌'} JSON cleaning ${success ? 'works' : 'failed'}`);

@@ -1,15 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileCategories } from './scanner';
-
-export interface CodeChunk {
-  category: string;
-  files: Array<{
-    path: string;
-    content: string;
-  }>;
-  context: string;
-}
+import { CodeChunk, CodeFile, FILE_SIZE_LIMITS, FileSizeError } from './types';
 
 /**
  * Validate that a path is safe and within the project directory
@@ -27,10 +19,25 @@ function validatePath(projectPath: string, relativePath: string): string {
 }
 
 /**
+ * Validate file size is within acceptable limits
+ */
+async function validateFileSize(filePath: string): Promise<void> {
+  const stats = await fs.promises.stat(filePath);
+  if (stats.size > FILE_SIZE_LIMITS.MAX_FILE_SIZE) {
+    throw new FileSizeError(
+      path.basename(filePath),
+      stats.size,
+      FILE_SIZE_LIMITS.MAX_FILE_SIZE
+    );
+  }
+}
+
+/**
  * Async read file with path validation
  */
 async function readFileAsync(projectPath: string, relativePath: string): Promise<string> {
   const fullPath = validatePath(projectPath, relativePath);
+  await validateFileSize(fullPath);
   return fs.promises.readFile(fullPath, 'utf-8');
 }
 
@@ -54,6 +61,7 @@ export async function extractCodeForAnalysis(
   categories: FileCategories
 ): Promise<CodeChunk[]> {
   const chunks: CodeChunk[] = [];
+  let totalSize = 0;
 
   // Extract entry point for app initialization understanding
   if (categories.entry) {
@@ -76,9 +84,17 @@ export async function extractCodeForAnalysis(
     const stateFiles = await Promise.all(
       categories.state.slice(0, 5).map(async (file) => {
         try {
+          const content = await readFileAsync(projectPath, file);
+          totalSize += Buffer.byteLength(content, 'utf-8');
+          
+          if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
+            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            return null;
+          }
+          
           return {
             path: file,
-            content: await readFileAsync(projectPath, file)
+            content
           };
         } catch (error) {
           console.warn(`Warning: Could not read state file ${file}:`, error);
@@ -87,7 +103,7 @@ export async function extractCodeForAnalysis(
       })
     );
     
-    const validStateFiles = stateFiles.filter(f => f !== null) as Array<{path: string; content: string}>;
+    const validStateFiles = stateFiles.filter(f => f !== null) as CodeFile[];
     if (validStateFiles.length > 0) {
       chunks.push({
         category: 'state',
@@ -102,9 +118,17 @@ export async function extractCodeForAnalysis(
     const componentFiles = await Promise.all(
       categories.components.slice(0, 3).map(async (file) => {
         try {
+          const content = await readFileAsync(projectPath, file);
+          totalSize += Buffer.byteLength(content, 'utf-8');
+          
+          if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
+            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            return null;
+          }
+          
           return {
             path: file,
-            content: await readFileAsync(projectPath, file)
+            content
           };
         } catch (error) {
           console.warn(`Warning: Could not read component file ${file}:`, error);
@@ -113,7 +137,7 @@ export async function extractCodeForAnalysis(
       })
     );
     
-    const validComponentFiles = componentFiles.filter(f => f !== null) as Array<{path: string; content: string}>;
+    const validComponentFiles = componentFiles.filter(f => f !== null) as CodeFile[];
     if (validComponentFiles.length > 0) {
       chunks.push({
         category: 'components',
@@ -128,9 +152,17 @@ export async function extractCodeForAnalysis(
     const serviceFiles = await Promise.all(
       categories.services.slice(0, 3).map(async (file) => {
         try {
+          const content = await readFileAsync(projectPath, file);
+          totalSize += Buffer.byteLength(content, 'utf-8');
+          
+          if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
+            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            return null;
+          }
+          
           return {
             path: file,
-            content: await readFileAsync(projectPath, file)
+            content
           };
         } catch (error) {
           console.warn(`Warning: Could not read service file ${file}:`, error);
@@ -139,7 +171,7 @@ export async function extractCodeForAnalysis(
       })
     );
     
-    const validServiceFiles = serviceFiles.filter(f => f !== null) as Array<{path: string; content: string}>;
+    const validServiceFiles = serviceFiles.filter(f => f !== null) as CodeFile[];
     if (validServiceFiles.length > 0) {
       chunks.push({
         category: 'services',

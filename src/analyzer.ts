@@ -1,5 +1,4 @@
-import { CodeChunk } from './extractor';
-import { analyzeCode, executeClaude, ClaudeOptions } from './claude-cli';
+import { analyzeCode, executeClaude } from './claude-cli';
 import { analysisPrompts } from './prompts';
 import { 
   ResponseCache, 
@@ -8,45 +7,14 @@ import {
   formatUsageInfo,
   extractUsageInfo
 } from './utils/claude-utils';
-
-export interface StateShape {
-  [key: string]: string | StateShape | StateShape[];
-}
-
-export interface FunctionalAnalysis {
-  appPurpose: string;
-  coreFeatures: string[];
-  userWorkflows: Array<{
-    name: string;
-    steps: string[];
-  }>;
-  dataFlow: {
-    sources: string[];
-    transformations: string[];
-    destinations: string[];
-  };
-  stateManagement: {
-    pattern: string;
-    stateShape: StateShape;
-    keyActions: string[];
-    selectors: string[];
-  };
-  businessLogic: {
-    rules: string[];
-    validations: string[];
-    calculations: string[];
-  };
-  dependencies: {
-    dart: string[];
-    tsEquivalents: Record<string, string>;
-  };
-}
-
-export interface AnalysisOptions {
-  useCache?: boolean;
-  verbose?: boolean;
-  model?: 'sonnet' | 'opus' | 'haiku';
-}
+import {
+  CodeChunk,
+  FunctionalAnalysis,
+  AnalysisOptions,
+  ChunkAnalysisResult,
+  ComprehensiveAnalysisResult,
+  ClaudeOptions
+} from './types';
 
 // Initialize cache
 const cache = new ResponseCache('.claude-cache', 120); // 2 hour cache
@@ -75,7 +43,7 @@ export async function analyzeFunctionality(
     progress.update(i + 1, `Analyzing ${chunk.category}...`);
     
     try {
-      let result: any;
+      let result: ChunkAnalysisResult | null = null;
       
       // Check cache first
       const cacheKey = `${chunk.category}_${model}`;
@@ -120,7 +88,7 @@ export async function analyzeFunctionality(
 /**
  * Get default result for a failed chunk analysis
  */
-function getDefaultResultForCategory(category: string): any {
+function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
   switch (category) {
     case 'entry':
       return {
@@ -161,29 +129,29 @@ function getDefaultResultForCategory(category: string): any {
 async function analyzeChunkByCategory(
   chunk: CodeChunk,
   options: ClaudeOptions
-): Promise<any> {
+): Promise<ChunkAnalysisResult | null> {
   const code = chunk.files.map(f => f.content).join('\n\n');
   
   switch (chunk.category) {
     case 'entry':
       const entryPrompt = analysisPrompts.appFunctionality(code);
-      return await analyzeCode(code, entryPrompt, undefined, options);
+      return await analyzeCode(code, entryPrompt, undefined, options) as ChunkAnalysisResult;
     
     case 'state':
       const statePrompt = analysisPrompts.stateStructure(code);
-      return await analyzeCode(code, statePrompt, undefined, options);
+      return await analyzeCode(code, statePrompt, undefined, options) as ChunkAnalysisResult;
     
     case 'components':
       const componentPrompt = analysisPrompts.componentFunctionality(code);
-      return await analyzeCode(code, componentPrompt, undefined, options);
+      return await analyzeCode(code, componentPrompt, undefined, options) as ChunkAnalysisResult;
     
     case 'services':
       const servicePrompt = analysisPrompts.serviceLayer(code);
-      return await analyzeCode(code, servicePrompt, undefined, options);
+      return await analyzeCode(code, servicePrompt, undefined, options) as ChunkAnalysisResult;
     
     case 'dependencies':
       const depPrompt = analysisPrompts.dependencies(code);
-      return await analyzeCode(code, depPrompt, undefined, options);
+      return await analyzeCode(code, depPrompt, undefined, options) as ChunkAnalysisResult;
     
     default:
       return null;
@@ -195,7 +163,7 @@ async function analyzeChunkByCategory(
  */
 function mergeAnalysisResults(
   analysis: Partial<FunctionalAnalysis>,
-  result: any,
+  result: ChunkAnalysisResult | null,
   category: string
 ): void {
   if (!result) return;
@@ -324,7 +292,7 @@ export async function comprehensiveAnalysis(
     );
     
     // Transform comprehensive result to FunctionalAnalysis format
-    return transformComprehensiveResult(cleaned);
+    return transformComprehensiveResult(cleaned as ComprehensiveAnalysisResult);
     
   } catch (error) {
     console.error('Comprehensive analysis failed:', error);
@@ -335,15 +303,19 @@ export async function comprehensiveAnalysis(
 /**
  * Transform comprehensive analysis result to FunctionalAnalysis format
  */
-function transformComprehensiveResult(result: any): FunctionalAnalysis {
+function transformComprehensiveResult(result: ComprehensiveAnalysisResult): FunctionalAnalysis {
   return {
     appPurpose: result.summary?.appPurpose || 'Unknown',
-    coreFeatures: result.features?.map((f: any) => f.description) || [],
-    userWorkflows: result.features?.map((f: any) => ({
+    coreFeatures: result.features?.map((f) => f.description) || [],
+    userWorkflows: result.features?.map((f) => ({
       name: f.name,
       steps: f.userSteps || []
     })) || [],
-    dataFlow: result.dataFlow || {
+    dataFlow: result.dataFlow ? {
+      sources: result.dataFlow.sources || [],
+      transformations: result.dataFlow.processing || [],
+      destinations: result.dataFlow.storage ? [result.dataFlow.storage] : []
+    } : {
       sources: [],
       transformations: [],
       destinations: []
@@ -359,7 +331,10 @@ function transformComprehensiveResult(result: any): FunctionalAnalysis {
       validations: [],
       calculations: []
     },
-    dependencies: result.dependencies || {
+    dependencies: result.dependencies ? {
+      dart: result.dependencies.critical || [],
+      tsEquivalents: {} // We don't have tsEquivalents in the comprehensive result
+    } : {
       dart: [],
       tsEquivalents: {}
     }

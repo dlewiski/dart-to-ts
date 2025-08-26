@@ -1,52 +1,53 @@
 {
-  "appPurpose": "A web-based release dashboard application for tracking and managing software releases",
+  "appPurpose": "A web dashboard application for tracking and displaying software release information and dependencies",
   "coreFeatures": [
-    "Set up browser transport platform",
-    "Remove loading frame",
-    "Configure environment-based services",
+    "Configure transport platform for browser",
+    "Remove loading frame from DOM",
+    "Determine development vs production environment",
     "Initialize ReleaseDashboard component",
-    "View application versions and packages in expandable cards",
-    "Select/deselect apps from dropdown with checkboxes",
-    "Save current search selection as a bookmark",
-    "Expand/collapse accordion sections to view package details"
+    "View app deployment information",
+    "Expand/collapse package details",
+    "Select/deselect apps from dropdown",
+    "Save current search as bookmark",
+    "Enter bookmark name"
   ],
   "userWorkflows": [
     {
       "name": "User Interactions",
       "steps": [
-        "onClick handlers for accordion expansion",
-        "onClick handlers for checkbox selection/deselection",
-        "onClick handler for bookmark button",
-        "onChange handler for bookmark name input",
-        "onClose handler for bookmark menu"
+        "Click accordion to expand/collapse",
+        "Click checkboxes to select apps",
+        "Click Save Search button",
+        "Type in bookmark name field",
+        "Click Save bookmark button"
       ]
     }
   ],
   "dataFlow": {
     "sources": [
-      "HTTP service endpoints",
-      "Mock data sources"
+      "Package dependency API",
+      "FEWS service API"
     ],
     "transformations": [
-      "fetchForPackage async operation"
+      "GET requests for package dependencies"
     ],
     "destinations": [
       "API responses"
     ]
   },
   "stateManagement": {
-    "pattern": "fetchDashboardDataMiddleware - dispatches FetchAppsForDeployAction for all deploys, fetchAppsForDeployMiddleware - async API calls to FewsService, applyBookmarkMiddleware - applies bookmark selections and updates URL, filterUrlMiddleware - syncs filter/selection state to URL query parameters, urlStateSyncMiddleware - restores state from URL on initialization, clearAllFiltersMiddleware - clears all filters and updates URL",
+    "pattern": "fetchDashboardDataMiddleware, fetchAppsForDeployMiddleware, applyBookmarkMiddleware, filterUrlMiddleware, urlStateSyncMiddleware, clearAllFiltersMiddleware",
     "stateShape": {
-      "query": "nullable String - user's current package filter query",
-      "deploys": "BuiltMap<WdeskDeploy, DeployState> - map of deploy environments to their state",
-      "recentSearches": "BuiltList<String> - list of recent search queries (max 5)",
-      "bookmarks": "BuiltList<SearchBookmark> - list of saved search bookmarks",
-      "selectedDeploys": "BuiltList<WdeskDeploy> - currently selected deployment environments",
-      "selectedDeploysApps": "BuiltList<String> - apps from selected deploys",
-      "selectedApps": "BuiltList<String> - currently selected applications",
-      "clearFiltersActionCounter": "nullable int - counter for filter clear actions",
-      "viewMode": "ViewMode enum - current view mode (cards or table)",
-      "versionThreshold": "nullable String - minimum version filter threshold"
+      "query": "nullable string for package filter query",
+      "deploys": "map of WdeskDeploy to DeployState containing apps and metadata",
+      "recentSearches": "list of recent search query strings",
+      "bookmarks": "list of SearchBookmark objects with label and selections",
+      "selectedDeploys": "list of currently selected WdeskDeploy values",
+      "selectedDeploysApps": "list of app names from selected deployments",
+      "selectedApps": "list of currently selected app names",
+      "clearFiltersActionCounter": "nullable counter for clear filters actions",
+      "viewMode": "ViewMode enum (cards or table)",
+      "versionThreshold": "nullable string for minimum version filtering"
     },
     "keyActions": [
       "FetchDashboardDataAction",
@@ -98,11 +99,8 @@
       "redux",
       "built_value",
       "built_collection",
-      "w_transport",
       "fluri",
-      "collection",
-      "meta",
-      "unify_ui"
+      "w_transport"
     ],
     "tsEquivalents": {
       "over_react": "react",
@@ -111,16 +109,12 @@
       "built_collection": "immutable",
       "collection": "lodash",
       "fluri": "url-parse",
-      "meta": "TypeScript decorators/annotations",
+      "meta": "TypeScript built-in",
       "w_transport": "axios",
       "build_runner": "vite",
-      "build_web_compilers": "typescript",
+      "build_web_compilers": "vite + TypeScript",
       "glob": "glob",
-      "built_value_generator": "TypeScript compiler",
-      "dart_dev": "npm scripts",
-      "dependency_validator": "npm audit",
-      "workiva_analysis_options": "eslint + prettier",
-      "over_react_format": "prettier + eslint-plugin-react"
+      "dependency_validator": "npm-check-updates"
     }
   }
 }

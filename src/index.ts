@@ -2,14 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { scanDartProject } from './scanner';
 import { extractCodeForAnalysis } from './extractor';
-import { analyzeFunctionality, comprehensiveAnalysis, AnalysisOptions } from './analyzer';
-
-interface CLIOptions {
-  comprehensive?: boolean;
-  model?: 'sonnet' | 'opus' | 'haiku';
-  verbose?: boolean;
-  noCache?: boolean;
-}
+import { analyzeFunctionality, comprehensiveAnalysis } from './analyzer';
+import { CLIOptions, AnalysisOptions, FunctionalAnalysis, Workflow } from './types';
 
 async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   console.log('🔍 Starting Dart app analysis with Claude Code integration...\n');
@@ -85,7 +79,7 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   return analysis;
 }
 
-function generateReadableReport(analysis: any): string {
+function generateReadableReport(analysis: FunctionalAnalysis): string {
   return `# Dart Application Functional Analysis Report
 
 ## Application Purpose
@@ -95,7 +89,7 @@ ${analysis.appPurpose}
 ${analysis.coreFeatures.map((f: string) => `- ${f}`).join('\n')}
 
 ## User Workflows
-${analysis.userWorkflows.map((w: any) => `
+${analysis.userWorkflows.map((w: Workflow) => `
 ### ${w.name}
 ${w.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`).join('\n')}
 
@@ -151,8 +145,8 @@ if (require.main === module) {
   // Check for model option
   const modelIndex = process.argv.indexOf('--model');
   if (modelIndex !== -1 && process.argv[modelIndex + 1]) {
-    const model = process.argv[modelIndex + 1] as 'sonnet' | 'opus' | 'haiku';
-    if (['sonnet', 'opus', 'haiku'].includes(model)) {
+    const model = process.argv[modelIndex + 1] as 'sonnet' | 'opus';
+    if (['sonnet', 'opus'].includes(model)) {
       options.model = model;
     }
   }

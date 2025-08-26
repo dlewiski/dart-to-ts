@@ -1,21 +1,11 @@
 import { spawn } from 'child_process';
-
-export interface ClaudeOptions {
-  model?: 'sonnet' | 'opus' | 'haiku';
-  outputFormat?: 'text' | 'json';
-  maxRetries?: number;
-  verbose?: boolean;
-}
-
-export interface ClaudeResponse {
-  result: any;
-  raw?: string;
-  error?: string;
-}
-
-export interface AnalysisSchema {
-  [key: string]: string | number | boolean | AnalysisSchema | AnalysisSchema[];
-}
+import { 
+  ClaudeOptions, 
+  ClaudeResponse, 
+  AnalysisSchema,
+  TIMEOUTS,
+  TimeoutError 
+} from './types';
 
 /**
  * Execute a prompt using Claude CLI with spawn for better security
@@ -28,7 +18,8 @@ export async function executeClaude(
     model = 'sonnet',
     outputFormat = 'text',
     maxRetries = 3,
-    verbose = false
+    verbose = false,
+    timeout = TIMEOUTS.CLAUDE_CLI
   } = options;
 
   // Build the command arguments
@@ -44,7 +35,7 @@ export async function executeClaude(
         console.log(`[Claude CLI] Attempt ${attempt}/${maxRetries}...`);
       }
       
-      const result = await executeClaudeSpawn(prompt, args, verbose);
+      const result = await executeClaudeSpawn(prompt, args, verbose, options.timeout);
       
       if (outputFormat === 'json') {
         try {
@@ -61,11 +52,12 @@ export async function executeClaude(
       
       return { result: result.trim(), raw: result };
       
-    } catch (error: any) {
+    } catch (error) {
       if (attempt === maxRetries) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         return {
           result: null,
-          error: `Failed after ${maxRetries} attempts: ${error.message}`
+          error: `Failed after ${maxRetries} attempts: ${errorMessage}`
         };
       }
       
@@ -87,7 +79,8 @@ export async function executeClaude(
 function executeClaudeSpawn(
   prompt: string, 
   args: string[], 
-  verbose: boolean
+  verbose: boolean,
+  timeout: number = TIMEOUTS.CLAUDE_CLI
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('claude', args, {
@@ -100,6 +93,15 @@ function executeClaudeSpawn(
     let stderr = '';
     const maxOutputSize = 10 * 1024 * 1024; // 10MB limit
     let outputSize = 0;
+    let timeoutHandle: NodeJS.Timeout | null = null;
+
+    // Set up timeout
+    if (timeout > 0) {
+      timeoutHandle = setTimeout(() => {
+        child.kill('SIGTERM');
+        reject(new TimeoutError('Claude CLI execution', timeout));
+      }, timeout);
+    }
 
     // Handle stdin errors
     child.stdin.on('error', (error) => {
@@ -139,6 +141,9 @@ function executeClaudeSpawn(
     });
 
     child.on('close', (code) => {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
       if (code !== 0) {
         reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
       } else {
@@ -156,7 +161,7 @@ export async function analyzeCode(
   analysisType: string,
   schema?: AnalysisSchema,
   options: ClaudeOptions = {}
-): Promise<any> {
+): Promise<unknown> {
   const schemaInstruction = schema 
     ? `Return ONLY a valid JSON object matching this schema: ${JSON.stringify(schema)}`
     : 'Return ONLY valid JSON';
@@ -179,13 +184,13 @@ ${code}
   }
   
   // Try to extract and validate JSON from the response
-  return extractAndValidateJson(response.result);
+  return extractAndValidateJson(String(response.result));
 }
 
 /**
  * Extract and validate JSON from Claude's response
  */
-function extractAndValidateJson(text: string): any {
+function extractAndValidateJson(text: string): unknown {
   // Try to extract JSON from markdown code blocks
   const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || 
                     text.match(/```\n?([\s\S]*?)\n?```/) ||
