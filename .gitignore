@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+
+# Keep source TypeScript files
+!src/**/*.ts
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Analysis outputs (can be regenerated)
+analysis/raw/*
+analysis/functional/*
+
+# Keep analysis directory structure
+!analysis/raw/.gitkeep
+!analysis/functional/.gitkeep
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Test coverage
+coverage/
+.nyc_output/
