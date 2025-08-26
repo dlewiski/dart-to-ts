@@ -42,6 +42,9 @@ analysis/functional/*
 .cache/
 tmp/
 
+# Claude integration cache
+.claude-cache/
+
 # Test coverage
 coverage/
 .nyc_output/

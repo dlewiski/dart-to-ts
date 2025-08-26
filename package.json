@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "analyze": "pnpm build && node dist/index.js"
+    "analyze": "pnpm build && node dist/index.js",
+    "test": "pnpm build && node dist/test/claude-integration.test.js"
   },
   "dependencies": {},
   "devDependencies": {
