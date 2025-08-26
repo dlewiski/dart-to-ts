@@ -57,19 +57,34 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   
   // Save file categories
   const categoriesPath = path.join(rawDir, 'file-categories.json');
-  fs.writeFileSync(categoriesPath, JSON.stringify(categories, null, 2));
-  console.log(`✅ File categories saved to: ${categoriesPath}`);
+  try {
+    fs.writeFileSync(categoriesPath, JSON.stringify(categories, null, 2));
+    console.log(`✅ File categories saved to: ${categoriesPath}`);
+  } catch (error) {
+    console.error(`❌ Failed to save file categories:`, error);
+    throw new Error(`Failed to save file categories: ${error instanceof Error ? error.message : String(error)}`);
+  }
   
   // Save functional analysis
   const analysisPath = path.join(functionalDir, 'analysis.json');
-  fs.writeFileSync(analysisPath, JSON.stringify(analysis, null, 2));
-  console.log(`✅ Functional analysis saved to: ${analysisPath}`);
+  try {
+    fs.writeFileSync(analysisPath, JSON.stringify(analysis, null, 2));
+    console.log(`✅ Functional analysis saved to: ${analysisPath}`);
+  } catch (error) {
+    console.error(`❌ Failed to save functional analysis:`, error);
+    throw new Error(`Failed to save functional analysis: ${error instanceof Error ? error.message : String(error)}`);
+  }
   
   // Generate human-readable report
   const report = generateReadableReport(analysis);
   const reportPath = path.join(analysisDir, 'report.md');
-  fs.writeFileSync(reportPath, report);
-  console.log(`✅ Readable report saved to: ${reportPath}\n`);
+  try {
+    fs.writeFileSync(reportPath, report);
+    console.log(`✅ Readable report saved to: ${reportPath}\n`);
+  } catch (error) {
+    console.error(`❌ Failed to save report:`, error);
+    throw new Error(`Failed to save report: ${error instanceof Error ? error.message : String(error)}`);
+  }
   
   console.log('🎯 Analysis complete! Next steps:');
   console.log('1. Review the functional analysis');

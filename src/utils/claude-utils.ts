@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { CacheOptions, CachedResponse, UsageInfo, TIMEOUTS } from '../types';
+import { CacheOptions, CachedResponse, UsageInfo, ClaudeApiResponse } from '../types';
 
 /**
  * Cache for Claude responses to avoid redundant API calls
@@ -25,7 +25,7 @@ export class ResponseCache {
    */
   private getCacheKey(prompt: string, options?: CacheOptions): string {
     const content = JSON.stringify({ prompt, options });
-    return crypto.createHash('md5').update(content).digest('hex');
+    return crypto.createHash('sha256').update(content).digest('hex');
   }
 
   /**
@@ -45,12 +45,17 @@ export class ResponseCache {
       
       if (age > this.ttl) {
         // Cache expired
-        fs.unlinkSync(cachePath);
+        try {
+          fs.unlinkSync(cachePath);
+        } catch (unlinkError) {
+          console.warn('[Cache] Failed to remove expired cache file:', unlinkError);
+        }
         return null;
       }
       
       return cached.response as T;
     } catch (e) {
+      console.warn('[Cache] Failed to read cache file:', e);
       return null;
     }
   }
@@ -68,7 +73,12 @@ export class ResponseCache {
       metadata: options
     };
     
-    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    try {
+      fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    } catch (error) {
+      console.error('[Cache] Failed to write cache file:', error);
+      // Don't throw - caching is not critical to operation
+    }
   }
 
   /**
@@ -253,7 +263,7 @@ export function extractUsageInfo(jsonResponse: unknown): UsageInfo {
     return {};
   }
   
-  const response = jsonResponse as any; // Type assertion for accessing properties
+  const response = jsonResponse as ClaudeApiResponse;
   const usage = response.usage || {};
   const cost = response.total_cost_usd;
   

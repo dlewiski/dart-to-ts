@@ -33,6 +33,18 @@ export interface UsageInfo {
   cost?: string;
 }
 
+/**
+ * Claude API response structure
+ */
+export interface ClaudeApiResponse {
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+  total_cost_usd?: number | string;
+  [key: string]: unknown; // Allow additional properties
+}
+
 export interface CachedResponse {
   timestamp: number;
   response: unknown;

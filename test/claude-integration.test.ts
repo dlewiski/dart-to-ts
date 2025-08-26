@@ -5,6 +5,18 @@ import { executeClaude, analyzeCode } from '../src/claude-cli';
 import { analysisPrompts } from '../src/prompts';
 import { cleanJsonResponse } from '../src/utils/claude-utils';
 
+// Test-specific type definitions
+interface ClassAnalysisResult {
+  className: string;
+  methods: string[];
+  properties: string[];
+}
+
+interface CleanedJsonResult {
+  valid: boolean;
+  data: unknown;
+}
+
 async function testBasicPrompt() {
   console.log('📝 Test 1: Basic prompt execution');
   
@@ -68,7 +80,7 @@ Return ONLY the JSON object.`;
     maxRetries: 2
   });
   
-  const typedResult = result as any;
+  const typedResult = result as ClassAnalysisResult;
   const success = typedResult && 
                   typedResult.className === 'Dashboard' &&
                   Array.isArray(typedResult.methods) &&
@@ -115,7 +127,7 @@ Here is the JSON you requested:
 `;
   
   try {
-    const cleaned = cleanJsonResponse(messyResponse) as any;
+    const cleaned = cleanJsonResponse(messyResponse) as Record<string, unknown>;
     const success = cleaned.test === 'value' && cleaned.number === 123;
     console.log('   Cleaned:', cleaned);
     console.log(`   ${success ? '✅' : '❌'} JSON cleaning ${success ? 'works' : 'failed'}`);

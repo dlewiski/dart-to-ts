@@ -35,7 +35,7 @@ export async function executeClaude(
         console.log(`[Claude CLI] Attempt ${attempt}/${maxRetries}...`);
       }
       
-      const result = await executeClaudeSpawn(prompt, args, verbose, options.timeout);
+      const result = await executeClaudeSpawn(prompt, args, verbose, timeout);
       
       if (outputFormat === 'json') {
         try {
@@ -94,6 +94,37 @@ function executeClaudeSpawn(
     const maxOutputSize = 10 * 1024 * 1024; // 10MB limit
     let outputSize = 0;
     let timeoutHandle: NodeJS.Timeout | null = null;
+    let isCleanedUp = false;
+
+    // Cleanup function to ensure proper resource cleanup
+    const cleanup = () => {
+      if (isCleanedUp) return;
+      isCleanedUp = true;
+      
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+        timeoutHandle = null;
+      }
+      
+      // Remove all listeners to prevent memory leaks
+      child.stdin.removeAllListeners();
+      child.stdout.removeAllListeners();
+      child.stderr.removeAllListeners();
+      child.removeAllListeners();
+    };
+
+    // Handle process termination signals
+    const handleSignal = (signal: NodeJS.Signals) => {
+      if (verbose) {
+        console.log(`[Claude CLI] Received ${signal}, terminating child process...`);
+      }
+      cleanup();
+      child.kill(signal);
+      reject(new Error(`Process terminated by ${signal}`));
+    };
+
+    process.once('SIGINT', () => handleSignal('SIGINT'));
+    process.once('SIGTERM', () => handleSignal('SIGTERM'));
 
     // Set up timeout
     if (timeout > 0) {
@@ -137,13 +168,22 @@ function executeClaudeSpawn(
     });
 
     child.on('error', (error) => {
+      cleanup();
+      
+      // Remove signal handlers
+      process.removeListener('SIGINT', handleSignal);
+      process.removeListener('SIGTERM', handleSignal);
+      
       reject(error);
     });
 
     child.on('close', (code) => {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
+      cleanup();
+      
+      // Remove signal handlers
+      process.removeListener('SIGINT', handleSignal);
+      process.removeListener('SIGTERM', handleSignal);
+      
       if (code !== 0) {
         reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
       } else {
