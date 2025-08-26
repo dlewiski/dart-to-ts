@@ -1,7 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { FileCategories } from './scanner';
-import { CodeChunk, CodeFile, FILE_SIZE_LIMITS, FileSizeError } from './types';
+import { type FileCategories } from './scanner';
+import {
+  type CodeChunk,
+  type CodeFile,
+  FILE_SIZE_LIMITS,
+  FileSizeError,
+} from './types';
 
 /**
  * Validate that a path is safe and within the project directory
@@ -9,12 +14,12 @@ import { CodeChunk, CodeFile, FILE_SIZE_LIMITS, FileSizeError } from './types';
 function validatePath(projectPath: string, relativePath: string): string {
   const fullPath = path.resolve(projectPath, relativePath);
   const projectRealPath = path.resolve(projectPath);
-  
+
   // Ensure the resolved path is within the project directory
   if (!fullPath.startsWith(projectRealPath)) {
     throw new Error(`Path traversal detected: ${relativePath}`);
   }
-  
+
   return fullPath;
 }
 
@@ -35,7 +40,10 @@ async function validateFileSize(filePath: string): Promise<void> {
 /**
  * Async read file with path validation
  */
-async function readFileAsync(projectPath: string, relativePath: string): Promise<string> {
+async function readFileAsync(
+  projectPath: string,
+  relativePath: string
+): Promise<string> {
   const fullPath = validatePath(projectPath, relativePath);
   await validateFileSize(fullPath);
   return fs.promises.readFile(fullPath, 'utf-8');
@@ -57,7 +65,7 @@ async function fileExists(filePath: string): Promise<boolean> {
  * Extract code chunks for analysis with async file operations
  */
 export async function extractCodeForAnalysis(
-  projectPath: string, 
+  projectPath: string,
   categories: FileCategories
 ): Promise<CodeChunk[]> {
   const chunks: CodeChunk[] = [];
@@ -68,14 +76,19 @@ export async function extractCodeForAnalysis(
     try {
       chunks.push({
         category: 'entry',
-        files: [{
-          path: categories.entry,
-          content: await readFileAsync(projectPath, categories.entry)
-        }],
-        context: 'Main entry point - app initialization and setup'
+        files: [
+          {
+            path: categories.entry,
+            content: await readFileAsync(projectPath, categories.entry),
+          },
+        ],
+        context: 'Main entry point - app initialization and setup',
       });
     } catch (error) {
-      console.warn(`Warning: Could not read entry file ${categories.entry}:`, error);
+      console.warn(
+        `Warning: Could not read entry file ${categories.entry}:`,
+        error
+      );
     }
   }
 
@@ -86,15 +99,17 @@ export async function extractCodeForAnalysis(
         try {
           const content = await readFileAsync(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
-          
+
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            console.warn(
+              `Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`
+            );
             return null;
           }
-          
+
           return {
             path: file,
-            content
+            content,
           };
         } catch (error) {
           console.warn(`Warning: Could not read state file ${file}:`, error);
@@ -102,13 +117,13 @@ export async function extractCodeForAnalysis(
         }
       })
     );
-    
-    const validStateFiles = stateFiles.filter(f => f !== null) as CodeFile[];
+
+    const validStateFiles = stateFiles.filter((f) => f !== null) as CodeFile[];
     if (validStateFiles.length > 0) {
       chunks.push({
         category: 'state',
         files: validStateFiles,
-        context: 'Redux state management - actions, reducers, selectors'
+        context: 'Redux state management - actions, reducers, selectors',
       });
     }
   }
@@ -120,29 +135,36 @@ export async function extractCodeForAnalysis(
         try {
           const content = await readFileAsync(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
-          
+
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            console.warn(
+              `Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`
+            );
             return null;
           }
-          
+
           return {
             path: file,
-            content
+            content,
           };
         } catch (error) {
-          console.warn(`Warning: Could not read component file ${file}:`, error);
+          console.warn(
+            `Warning: Could not read component file ${file}:`,
+            error
+          );
           return null;
         }
       })
     );
-    
-    const validComponentFiles = componentFiles.filter(f => f !== null) as CodeFile[];
+
+    const validComponentFiles = componentFiles.filter(
+      (f) => f !== null
+    ) as CodeFile[];
     if (validComponentFiles.length > 0) {
       chunks.push({
         category: 'components',
         files: validComponentFiles,
-        context: 'UI components - user interactions and data display'
+        context: 'UI components - user interactions and data display',
       });
     }
   }
@@ -154,15 +176,17 @@ export async function extractCodeForAnalysis(
         try {
           const content = await readFileAsync(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
-          
+
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-            console.warn(`Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`);
+            console.warn(
+              `Total size limit exceeded (${FILE_SIZE_LIMITS.MAX_TOTAL_SIZE} bytes). Stopping chunk extraction.`
+            );
             return null;
           }
-          
+
           return {
             path: file,
-            content
+            content,
           };
         } catch (error) {
           console.warn(`Warning: Could not read service file ${file}:`, error);
@@ -170,13 +194,15 @@ export async function extractCodeForAnalysis(
         }
       })
     );
-    
-    const validServiceFiles = serviceFiles.filter(f => f !== null) as CodeFile[];
+
+    const validServiceFiles = serviceFiles.filter(
+      (f) => f !== null
+    ) as CodeFile[];
     if (validServiceFiles.length > 0) {
       chunks.push({
         category: 'services',
         files: validServiceFiles,
-        context: 'Service layer - API calls and data fetching'
+        context: 'Service layer - API calls and data fetching',
       });
     }
   }
@@ -187,11 +213,13 @@ export async function extractCodeForAnalysis(
     try {
       chunks.push({
         category: 'dependencies',
-        files: [{
-          path: 'pubspec.yaml',
-          content: await fs.promises.readFile(pubspecPath, 'utf-8')
-        }],
-        context: 'Project dependencies and configuration'
+        files: [
+          {
+            path: 'pubspec.yaml',
+            content: await fs.promises.readFile(pubspecPath, 'utf-8'),
+          },
+        ],
+        context: 'Project dependencies and configuration',
       });
     } catch (error) {
       console.warn(`Warning: Could not read pubspec.yaml:`, error);

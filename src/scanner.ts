@@ -17,16 +17,16 @@ export function scanDartProject(projectPath: string): FileCategories {
     services: [],
     utils: [],
     entry: null,
-    models: []
+    models: [],
   };
 
   function scanDirectory(dirPath: string) {
     const items = fs.readdirSync(dirPath);
-    
+
     for (const item of items) {
       const fullPath = path.join(dirPath, item);
       const stat = fs.statSync(fullPath);
-      
+
       if (stat.isDirectory() && !item.startsWith('.') && item !== 'build') {
         scanDirectory(fullPath);
       } else if (item.endsWith('.dart')) {
@@ -37,24 +37,40 @@ export function scanDartProject(projectPath: string): FileCategories {
 
   function categorizeFile(filePath: string, cats: FileCategories) {
     const relativePath = path.relative(projectPath, filePath);
-    
+
     // Entry point
     if (relativePath === 'web/main.dart') {
       cats.entry = relativePath;
       return;
     }
-    
+
     // Categorize by path and filename patterns
-    if (relativePath.includes('/components/') || relativePath.includes('_ui.dart')) {
+    if (
+      relativePath.includes('/components/') ||
+      relativePath.includes('_ui.dart')
+    ) {
       cats.components.push(relativePath);
-    } else if (relativePath.includes('/redux/') || relativePath.includes('state') || 
-               relativePath.includes('reducer') || relativePath.includes('action')) {
+    } else if (
+      relativePath.includes('/redux/') ||
+      relativePath.includes('state') ||
+      relativePath.includes('reducer') ||
+      relativePath.includes('action')
+    ) {
       cats.state.push(relativePath);
-    } else if (relativePath.includes('/service') || relativePath.includes('_service')) {
+    } else if (
+      relativePath.includes('/service') ||
+      relativePath.includes('_service')
+    ) {
       cats.services.push(relativePath);
-    } else if (relativePath.includes('/utils/') || relativePath.includes('_utils')) {
+    } else if (
+      relativePath.includes('/utils/') ||
+      relativePath.includes('_utils')
+    ) {
       cats.utils.push(relativePath);
-    } else if (relativePath.includes('/models/') || relativePath.includes('.g.dart')) {
+    } else if (
+      relativePath.includes('/models/') ||
+      relativePath.includes('.g.dart')
+    ) {
       cats.models.push(relativePath);
     }
   }

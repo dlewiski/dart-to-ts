@@ -5,7 +5,11 @@ node_modules/
 # Build outputs
 dist/
 build/
-*.js
+# Compiled JavaScript (but not config files)
+dist/**/*.js
+dist/**/*.js.map
+src/**/*.js
+test/**/*.js
 *.js.map
 *.d.ts
 

@@ -3,36 +3,43 @@ import * as path from 'path';
 import { scanDartProject } from './scanner';
 import { extractCodeForAnalysis } from './extractor';
 import { analyzeFunctionality, comprehensiveAnalysis } from './analyzer';
-import { CLIOptions, AnalysisOptions, FunctionalAnalysis, Workflow } from './types';
+import {
+  type CLIOptions,
+  type AnalysisOptions,
+  type FunctionalAnalysis,
+  type Workflow,
+} from './types';
 
 async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
-  console.log('🔍 Starting Dart app analysis with Claude Code integration...\n');
-  
+  console.log(
+    '🔍 Starting Dart app analysis with Claude Code integration...\n'
+  );
+
   // Step 1: Scan and categorize files
   console.log('📁 Scanning project structure...');
   const categories = scanDartProject(projectPath);
-  
+
   console.log(`Found:
   - ${categories.components.length} component files
   - ${categories.state.length} state management files
   - ${categories.services.length} service files
   - ${categories.utils.length} utility files
   - Entry point: ${categories.entry || 'not found'}\n`);
-  
+
   // Step 2: Extract relevant code chunks
   console.log('📝 Extracting code for analysis...');
   const chunks = await extractCodeForAnalysis(projectPath, categories);
   console.log(`Prepared ${chunks.length} code chunks for analysis\n`);
-  
+
   // Step 3: Analyze functionality using Claude CLI
   const analysisOptions: AnalysisOptions = {
     model: options.model || 'sonnet',
     verbose: options.verbose || false,
-    useCache: !options.noCache
+    useCache: !options.noCache,
   };
-  
+
   let analysis;
-  
+
   if (options.comprehensive) {
     // Use comprehensive analysis for deeper understanding
     analysis = await comprehensiveAnalysis(chunks, analysisOptions);
@@ -40,21 +47,21 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
     // Use chunk-by-chunk analysis for efficiency
     analysis = await analyzeFunctionality(chunks, analysisOptions);
   }
-  
+
   // Step 4: Generate reports
   console.log('\n📊 Generating analysis reports...\n');
-  
+
   // Ensure analysis directories exist
   const analysisDir = path.join(__dirname, '..', 'analysis');
   const rawDir = path.join(analysisDir, 'raw');
   const functionalDir = path.join(analysisDir, 'functional');
-  
-  [analysisDir, rawDir, functionalDir].forEach(dir => {
+
+  [analysisDir, rawDir, functionalDir].forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
   });
-  
+
   // Save file categories
   const categoriesPath = path.join(rawDir, 'file-categories.json');
   try {
@@ -62,9 +69,11 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
     console.log(`✅ File categories saved to: ${categoriesPath}`);
   } catch (error) {
     console.error(`❌ Failed to save file categories:`, error);
-    throw new Error(`Failed to save file categories: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to save file categories: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  
+
   // Save functional analysis
   const analysisPath = path.join(functionalDir, 'analysis.json');
   try {
@@ -72,9 +81,11 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
     console.log(`✅ Functional analysis saved to: ${analysisPath}`);
   } catch (error) {
     console.error(`❌ Failed to save functional analysis:`, error);
-    throw new Error(`Failed to save functional analysis: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to save functional analysis: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  
+
   // Generate human-readable report
   const report = generateReadableReport(analysis);
   const reportPath = path.join(analysisDir, 'report.md');
@@ -83,14 +94,16 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
     console.log(`✅ Readable report saved to: ${reportPath}\n`);
   } catch (error) {
     console.error(`❌ Failed to save report:`, error);
-    throw new Error(`Failed to save report: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Failed to save report: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  
+
   console.log('🎯 Analysis complete! Next steps:');
   console.log('1. Review the functional analysis');
   console.log('2. Validate understanding with test app');
   console.log('3. Begin TypeScript architecture planning');
-  
+
   return analysis;
 }
 
@@ -104,9 +117,13 @@ ${analysis.appPurpose}
 ${analysis.coreFeatures.map((f: string) => `- ${f}`).join('\n')}
 
 ## User Workflows
-${analysis.userWorkflows.map((w: Workflow) => `
+${analysis.userWorkflows
+  .map(
+    (w: Workflow) => `
 ### ${w.name}
-${w.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`).join('\n')}
+${w.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
+  )
+  .join('\n')}
 
 ## Data Architecture
 ### Sources
@@ -147,16 +164,17 @@ Based on this analysis, the TypeScript conversion should:
 
 // Run analysis if called directly
 if (require.main === module) {
-  const projectPath = process.argv[2] || path.join(__dirname, '..', 'frontend_release_dashboard');
-  
+  const projectPath =
+    process.argv[2] || path.join(__dirname, '..', 'frontend_release_dashboard');
+
   // Parse command line options
   const options: CLIOptions = {
     comprehensive: process.argv.includes('--comprehensive'),
     verbose: process.argv.includes('--verbose'),
     noCache: process.argv.includes('--no-cache'),
-    model: 'sonnet' // default
+    model: 'sonnet', // default
   };
-  
+
   // Check for model option
   const modelIndex = process.argv.indexOf('--model');
   if (modelIndex !== -1 && process.argv[modelIndex + 1]) {
@@ -165,7 +183,7 @@ if (require.main === module) {
       options.model = model;
     }
   }
-  
+
   // Show usage if help requested
   if (process.argv.includes('--help')) {
     console.log(`
@@ -186,7 +204,7 @@ Examples:
 `);
     process.exit(0);
   }
-  
+
   analyzeDartApp(projectPath, options).catch(console.error);
 }
 

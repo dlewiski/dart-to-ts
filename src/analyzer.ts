@@ -1,19 +1,19 @@
 import { analyzeCode, executeClaude } from './claude-cli';
 import { analysisPrompts } from './prompts';
-import { 
-  ResponseCache, 
-  ProgressIndicator, 
+import {
+  ResponseCache,
+  ProgressIndicator,
   cleanJsonResponse,
   formatUsageInfo,
-  extractUsageInfo
+  extractUsageInfo,
 } from './utils/claude-utils';
 import {
-  CodeChunk,
-  FunctionalAnalysis,
-  AnalysisOptions,
-  ChunkAnalysisResult,
-  ComprehensiveAnalysisResult,
-  ClaudeOptions
+  type CodeChunk,
+  type FunctionalAnalysis,
+  type AnalysisOptions,
+  type ChunkAnalysisResult,
+  type ComprehensiveAnalysisResult,
+  type ClaudeOptions,
 } from './types';
 
 // Initialize cache
@@ -23,47 +23,48 @@ const cache = new ResponseCache('.claude-cache', 120); // 2 hour cache
  * Analyze Dart code functionality using Claude CLI
  */
 export async function analyzeFunctionality(
-  chunks: CodeChunk[], 
+  chunks: CodeChunk[],
   options: AnalysisOptions = {}
 ): Promise<FunctionalAnalysis> {
-  const { 
-    useCache = true, 
-    verbose = false, 
-    model = 'sonnet' 
-  } = options;
-  
-  console.log(`\n🧠 Analyzing ${chunks.length} code chunks using Claude (model: ${model})...\n`);
-  
+  const { useCache = true, verbose = false, model = 'sonnet' } = options;
+
+  console.log(
+    `\n🧠 Analyzing ${chunks.length} code chunks using Claude (model: ${model})...\n`
+  );
+
   const progress = new ProgressIndicator(chunks.length);
   const analysis: Partial<FunctionalAnalysis> = {};
-  
+
   // Process each chunk type
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
     progress.update(i + 1, `Analyzing ${chunk.category}...`);
-    
+
     try {
       let result: ChunkAnalysisResult | null = null;
-      
+
       // Check cache first
       const cacheKey = `${chunk.category}_${model}`;
       if (useCache) {
-        result = cache.get(chunk.files[0]?.content || '', { category: cacheKey });
+        result = cache.get(chunk.files[0]?.content || '', {
+          category: cacheKey,
+        });
       }
-      
+
       if (!result) {
         // Analyze based on category
         result = await analyzeChunkByCategory(chunk, { model, verbose });
-        
+
         // Cache the result
         if (useCache && result) {
-          cache.set(chunk.files[0]?.content || '', result, { category: cacheKey });
+          cache.set(chunk.files[0]?.content || '', result, {
+            category: cacheKey,
+          });
         }
       }
-      
+
       // Merge results into analysis
       mergeAnalysisResults(analysis, result, chunk.category);
-      
     } catch (error) {
       console.error(`\n⚠️  Error analyzing ${chunk.category}:`, error);
       // Log detailed error information for debugging
@@ -71,16 +72,20 @@ export async function analyzeFunctionality(
         console.error('Error details:', {
           category: chunk.category,
           filesCount: chunk.files.length,
-          errorMessage: error instanceof Error ? error.message : String(error)
+          errorMessage: error instanceof Error ? error.message : String(error),
         });
       }
       // Add fallback data for this chunk category
-      mergeAnalysisResults(analysis, getDefaultResultForCategory(chunk.category), chunk.category);
+      mergeAnalysisResults(
+        analysis,
+        getDefaultResultForCategory(chunk.category),
+        chunk.category
+      );
     }
   }
-  
+
   progress.complete('Analysis complete!');
-  
+
   // Fill in any missing fields with defaults
   return fillAnalysisDefaults(analysis);
 }
@@ -93,30 +98,30 @@ function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
     case 'entry':
       return {
         appPurpose: 'Analysis failed - manual review required',
-        initialization: []
+        initialization: [],
       };
     case 'state':
       return {
         middleware: ['Redux'],
         stateShape: {},
         keyActions: [],
-        selectors: []
+        selectors: [],
       };
     case 'components':
       return {
         userFeatures: [],
-        interactions: []
+        interactions: [],
       };
     case 'services':
       return {
         dataSource: [],
         operations: [],
-        dataFormat: null
+        dataFormat: null,
       };
     case 'dependencies':
       return {
         coreDependencies: [],
-        tsEquivalents: {}
+        tsEquivalents: {},
       };
     default:
       return {};
@@ -130,29 +135,59 @@ async function analyzeChunkByCategory(
   chunk: CodeChunk,
   options: ClaudeOptions
 ): Promise<ChunkAnalysisResult | null> {
-  const code = chunk.files.map(f => f.content).join('\n\n');
-  
+  const code = chunk.files.map((f) => f.content).join('\n\n');
+
   switch (chunk.category) {
-    case 'entry':
+    case 'entry': {
       const entryPrompt = analysisPrompts.appFunctionality(code);
-      return await analyzeCode(code, entryPrompt, undefined, options) as ChunkAnalysisResult;
-    
-    case 'state':
+      return (await analyzeCode(
+        code,
+        entryPrompt,
+        undefined,
+        options
+      )) as ChunkAnalysisResult;
+    }
+
+    case 'state': {
       const statePrompt = analysisPrompts.stateStructure(code);
-      return await analyzeCode(code, statePrompt, undefined, options) as ChunkAnalysisResult;
-    
-    case 'components':
+      return (await analyzeCode(
+        code,
+        statePrompt,
+        undefined,
+        options
+      )) as ChunkAnalysisResult;
+    }
+
+    case 'components': {
       const componentPrompt = analysisPrompts.componentFunctionality(code);
-      return await analyzeCode(code, componentPrompt, undefined, options) as ChunkAnalysisResult;
-    
-    case 'services':
+      return (await analyzeCode(
+        code,
+        componentPrompt,
+        undefined,
+        options
+      )) as ChunkAnalysisResult;
+    }
+
+    case 'services': {
       const servicePrompt = analysisPrompts.serviceLayer(code);
-      return await analyzeCode(code, servicePrompt, undefined, options) as ChunkAnalysisResult;
-    
-    case 'dependencies':
+      return (await analyzeCode(
+        code,
+        servicePrompt,
+        undefined,
+        options
+      )) as ChunkAnalysisResult;
+    }
+
+    case 'dependencies': {
       const depPrompt = analysisPrompts.dependencies(code);
-      return await analyzeCode(code, depPrompt, undefined, options) as ChunkAnalysisResult;
-    
+      return (await analyzeCode(
+        code,
+        depPrompt,
+        undefined,
+        options
+      )) as ChunkAnalysisResult;
+    }
+
     default:
       return null;
   }
@@ -166,8 +201,10 @@ function mergeAnalysisResults(
   result: ChunkAnalysisResult | null,
   category: string
 ): void {
-  if (!result) return;
-  
+  if (!result) {
+    return;
+  }
+
   switch (category) {
     case 'entry':
       if (result.appPurpose) {
@@ -177,40 +214,45 @@ function mergeAnalysisResults(
         analysis.coreFeatures = result.initialization;
       }
       break;
-    
+
     case 'state':
       analysis.stateManagement = {
         pattern: result.middleware?.join(', ') || 'Redux',
         stateShape: result.stateShape || {},
         keyActions: result.keyActions || [],
-        selectors: result.selectors || []
+        selectors: result.selectors || [],
       };
       break;
-    
+
     case 'components':
       if (result.userFeatures) {
-        analysis.coreFeatures = [...(analysis.coreFeatures || []), ...result.userFeatures];
+        analysis.coreFeatures = [
+          ...(analysis.coreFeatures || []),
+          ...result.userFeatures,
+        ];
       }
       if (result.interactions) {
-        analysis.userWorkflows = [{
-          name: 'User Interactions',
-          steps: result.interactions
-        }];
+        analysis.userWorkflows = [
+          {
+            name: 'User Interactions',
+            steps: result.interactions,
+          },
+        ];
       }
       break;
-    
+
     case 'services':
       analysis.dataFlow = {
         sources: result.dataSource || [],
         transformations: result.operations || [],
-        destinations: result.dataFormat ? ['API responses'] : []
+        destinations: result.dataFormat ? ['API responses'] : [],
       };
       break;
-    
+
     case 'dependencies':
       analysis.dependencies = {
         dart: result.coreDependencies || [],
-        tsEquivalents: result.tsEquivalents || {}
+        tsEquivalents: result.tsEquivalents || {},
       };
       break;
   }
@@ -229,23 +271,23 @@ function fillAnalysisDefaults(
     dataFlow: partial.dataFlow || {
       sources: [],
       transformations: [],
-      destinations: []
+      destinations: [],
     },
     stateManagement: partial.stateManagement || {
       pattern: 'Unknown',
       stateShape: {},
       keyActions: [],
-      selectors: []
+      selectors: [],
     },
     businessLogic: partial.businessLogic || {
       rules: [],
       validations: [],
-      calculations: []
+      calculations: [],
     },
     dependencies: partial.dependencies || {
       dart: [],
-      tsEquivalents: {}
-    }
+      tsEquivalents: {},
+    },
   };
 }
 
@@ -257,28 +299,33 @@ export async function comprehensiveAnalysis(
   options: AnalysisOptions = {}
 ): Promise<FunctionalAnalysis> {
   const { model = 'opus', verbose = false } = options;
-  
-  console.log(`\n🚀 Running comprehensive analysis with Claude (${model})...\n`);
-  
+
+  console.log(
+    `\n🚀 Running comprehensive analysis with Claude (${model})...\n`
+  );
+
   // Prepare chunks for analysis
-  const chunkData = chunks.map(chunk => ({
+  const chunkData = chunks.map((chunk) => ({
     category: chunk.category,
-    code: chunk.files.map(f => f.content).join('\n').substring(0, 3000) // Limit each chunk
+    code: chunk.files
+      .map((f) => f.content)
+      .join('\n')
+      .substring(0, 3000), // Limit each chunk
   }));
-  
+
   const prompt = analysisPrompts.comprehensiveAnalysis(chunkData);
-  
+
   try {
     const result = await executeClaude(prompt, {
       model,
       verbose,
-      outputFormat: 'json'
+      outputFormat: 'json',
     });
-    
+
     if (result.error) {
       throw new Error(result.error);
     }
-    
+
     // Extract and display usage info if available
     if (result.raw) {
       const usage = extractUsageInfo(JSON.parse(result.raw));
@@ -286,14 +333,15 @@ export async function comprehensiveAnalysis(
         console.log(`\n💰 Analysis cost: ${formatUsageInfo(usage)}\n`);
       }
     }
-    
+
     const cleaned = cleanJsonResponse(
-      typeof result.result === 'string' ? result.result : JSON.stringify(result.result)
+      typeof result.result === 'string'
+        ? result.result
+        : JSON.stringify(result.result)
     );
-    
+
     // Transform comprehensive result to FunctionalAnalysis format
     return transformComprehensiveResult(cleaned as ComprehensiveAnalysisResult);
-    
   } catch (error) {
     console.error('Comprehensive analysis failed:', error);
     throw error;
@@ -303,40 +351,49 @@ export async function comprehensiveAnalysis(
 /**
  * Transform comprehensive analysis result to FunctionalAnalysis format
  */
-function transformComprehensiveResult(result: ComprehensiveAnalysisResult): FunctionalAnalysis {
+function transformComprehensiveResult(
+  result: ComprehensiveAnalysisResult
+): FunctionalAnalysis {
   return {
     appPurpose: result.summary?.appPurpose || 'Unknown',
     coreFeatures: result.features?.map((f) => f.description) || [],
-    userWorkflows: result.features?.map((f) => ({
-      name: f.name,
-      steps: f.userSteps || []
-    })) || [],
-    dataFlow: result.dataFlow ? {
-      sources: result.dataFlow.sources || [],
-      transformations: result.dataFlow.processing || [],
-      destinations: result.dataFlow.storage ? [result.dataFlow.storage] : []
-    } : {
-      sources: [],
-      transformations: [],
-      destinations: []
-    },
+    userWorkflows:
+      result.features?.map((f) => ({
+        name: f.name,
+        steps: f.userSteps || [],
+      })) || [],
+    dataFlow: result.dataFlow
+      ? {
+          sources: result.dataFlow.sources || [],
+          transformations: result.dataFlow.processing || [],
+          destinations: result.dataFlow.storage
+            ? [result.dataFlow.storage]
+            : [],
+        }
+      : {
+          sources: [],
+          transformations: [],
+          destinations: [],
+        },
     stateManagement: {
       pattern: result.architecture?.pattern || 'Unknown',
       stateShape: {},
       keyActions: [],
-      selectors: []
+      selectors: [],
     },
     businessLogic: {
       rules: [],
       validations: [],
-      calculations: []
+      calculations: [],
     },
-    dependencies: result.dependencies ? {
-      dart: result.dependencies.critical || [],
-      tsEquivalents: {} // We don't have tsEquivalents in the comprehensive result
-    } : {
-      dart: [],
-      tsEquivalents: {}
-    }
+    dependencies: result.dependencies
+      ? {
+          dart: result.dependencies.critical || [],
+          tsEquivalents: {}, // We don't have tsEquivalents in the comprehensive result
+        }
+      : {
+          dart: [],
+          tsEquivalents: {},
+        },
   };
 }

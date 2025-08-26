@@ -3,7 +3,7 @@
  * Each prompt is designed to return structured JSON data
  */
 
-import { SchemaDefinition } from './types';
+import { type SchemaDefinition } from './types';
 
 export const analysisPrompts = {
   /**
@@ -139,10 +139,12 @@ Return ONLY the JSON object, no explanation.`,
   /**
    * Comprehensive analysis combining all aspects
    */
-  comprehensiveAnalysis: (chunks: Array<{category: string, code: string}>) => {
-    const chunkSections = chunks.map(chunk => 
-      `[${chunk.category.toUpperCase()}]\n${chunk.code}`
-    ).join('\n\n---\n\n');
+  comprehensiveAnalysis: (
+    chunks: Array<{ category: string; code: string }>
+  ) => {
+    const chunkSections = chunks
+      .map((chunk) => `[${chunk.category.toUpperCase()}]\n${chunk.code}`)
+      .join('\n\n---\n\n');
 
     return `
 Analyze this Dart application codebase and provide a comprehensive functional understanding.
@@ -185,7 +187,7 @@ Code sections to analyze:
 ${chunkSections}
 
 Return ONLY the JSON object, no explanation.`;
-  }
+  },
 };
 
 /**
