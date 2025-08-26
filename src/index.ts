@@ -27,7 +27,7 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   
   // Step 2: Extract relevant code chunks
   console.log('📝 Extracting code for analysis...');
-  const chunks = extractCodeForAnalysis(projectPath, categories);
+  const chunks = await extractCodeForAnalysis(projectPath, categories);
   console.log(`Prepared ${chunks.length} code chunks for analysis\n`);
   
   // Step 3: Analyze functionality using Claude CLI

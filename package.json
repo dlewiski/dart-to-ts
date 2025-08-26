@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "analyze": "pnpm build && node dist/index.js",
-    "test": "pnpm build && node dist/test/claude-integration.test.js"
+    "typecheck": "tsc --noEmit",
+    "analyze": "pnpm typecheck && pnpm build && node dist/index.js",
+    "test": "pnpm typecheck && pnpm build && node dist/test/claude-integration.test.js"
   },
   "dependencies": {},
   "devDependencies": {

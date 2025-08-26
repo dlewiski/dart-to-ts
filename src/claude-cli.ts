@@ -1,4 +1,4 @@
-import { execSync, ExecSyncOptions } from 'child_process';
+import { spawn } from 'child_process';
 
 export interface ClaudeOptions {
   model?: 'sonnet' | 'opus' | 'haiku';
@@ -13,8 +13,12 @@ export interface ClaudeResponse {
   error?: string;
 }
 
+export interface AnalysisSchema {
+  [key: string]: string | number | boolean | AnalysisSchema | AnalysisSchema[];
+}
+
 /**
- * Execute a prompt using Claude CLI
+ * Execute a prompt using Claude CLI with spawn for better security
  */
 export async function executeClaude(
   prompt: string,
@@ -27,15 +31,11 @@ export async function executeClaude(
     verbose = false
   } = options;
 
-  // Escape the prompt for shell execution
-  const escapedPrompt = escapeForShell(prompt);
-  
-  // Build the command
-  const outputFlag = outputFormat === 'json' ? '--output-format=json' : '';
-  const modelFlag = `--model ${model}`;
-  const verboseFlag = verbose ? '' : '2>/dev/null';
-  
-  const command = `echo '${escapedPrompt}' | claude --print ${modelFlag} ${outputFlag} ${verboseFlag}`;
+  // Build the command arguments
+  const args = ['--print', '--model', model];
+  if (outputFormat === 'json') {
+    args.push('--output-format=json');
+  }
   
   // Execute with retries
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -44,13 +44,7 @@ export async function executeClaude(
         console.log(`[Claude CLI] Attempt ${attempt}/${maxRetries}...`);
       }
       
-      const execOptions: ExecSyncOptions = {
-        encoding: 'utf-8',
-        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large responses
-        stdio: ['pipe', 'pipe', verbose ? 'inherit' : 'pipe']
-      };
-      
-      const result = execSync(command, execOptions) as string;
+      const result = await executeClaudeSpawn(prompt, args, verbose);
       
       if (outputFormat === 'json') {
         try {
@@ -88,12 +82,66 @@ export async function executeClaude(
 }
 
 /**
+ * Execute Claude CLI using spawn for better security and control
+ */
+function executeClaudeSpawn(
+  prompt: string, 
+  args: string[], 
+  verbose: boolean
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('claude', args, {
+      env: process.env,
+      shell: false // Prevent shell injection
+    });
+
+    let stdout = '';
+    let stderr = '';
+    const maxOutputSize = 10 * 1024 * 1024; // 10MB limit
+    let outputSize = 0;
+
+    // Write prompt to stdin
+    child.stdin.write(prompt);
+    child.stdin.end();
+
+    child.stdout.on('data', (data) => {
+      outputSize += data.length;
+      if (outputSize > maxOutputSize) {
+        child.kill();
+        reject(new Error(`Output exceeded maximum size of ${maxOutputSize} bytes`));
+        return;
+      }
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+      if (verbose) {
+        console.error('[Claude CLI stderr]:', data.toString());
+      }
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
+}
+
+/**
  * Analyze code with a specific analysis type
  */
 export async function analyzeCode(
   code: string,
   analysisType: string,
-  schema?: any,
+  schema?: AnalysisSchema,
   options: ClaudeOptions = {}
 ): Promise<any> {
   const schemaInstruction = schema 
@@ -117,33 +165,42 @@ ${code}
     throw new Error(response.error);
   }
   
-  // Try to extract JSON from the response
-  const jsonMatch = response.result.match(/```json\n?([\s\S]*?)\n?```/) || 
-                    response.result.match(/({[\s\S]*})/);
+  // Try to extract and validate JSON from the response
+  return extractAndValidateJson(response.result);
+}
+
+/**
+ * Extract and validate JSON from Claude's response
+ */
+function extractAndValidateJson(text: string): any {
+  // Try to extract JSON from markdown code blocks
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || 
+                    text.match(/```\n?([\s\S]*?)\n?```/) ||
+                    text.match(/({[\s\S]*})/);
   
   if (jsonMatch) {
     try {
-      return JSON.parse(jsonMatch[1]);
+      const parsed = JSON.parse(jsonMatch[1]);
+      // Basic validation - ensure it's an object
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      }
     } catch (e) {
-      console.warn('[Claude CLI] Failed to parse JSON response:', e);
-      return response.result;
+      console.warn('[Claude CLI] Failed to parse JSON from code block:', e);
     }
   }
   
   // Try direct JSON parse as last resort
   try {
-    return JSON.parse(response.result);
+    const parsed = JSON.parse(text);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
   } catch {
-    return response.result;
+    // Return the raw text if all parsing attempts fail
+    console.warn('[Claude CLI] Could not parse JSON from response, returning raw text');
+    return text;
   }
-}
-
-/**
- * Escape string for shell execution
- */
-function escapeForShell(str: string): string {
-  // Replace single quotes with escaped version
-  return str.replace(/'/g, "'\\''");
 }
 
 /**
@@ -152,4 +209,3 @@ function escapeForShell(str: string): string {
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-

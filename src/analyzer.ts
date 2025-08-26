@@ -9,6 +9,10 @@ import {
   extractUsageInfo
 } from './utils/claude-utils';
 
+export interface StateShape {
+  [key: string]: string | StateShape | StateShape[];
+}
+
 export interface FunctionalAnalysis {
   appPurpose: string;
   coreFeatures: string[];
@@ -23,7 +27,7 @@ export interface FunctionalAnalysis {
   };
   stateManagement: {
     pattern: string;
-    stateShape: any;
+    stateShape: StateShape;
     keyActions: string[];
     selectors: string[];
   };
@@ -94,7 +98,16 @@ export async function analyzeFunctionality(
       
     } catch (error) {
       console.error(`\n⚠️  Error analyzing ${chunk.category}:`, error);
-      // Continue with other chunks
+      // Log detailed error information for debugging
+      if (verbose) {
+        console.error('Error details:', {
+          category: chunk.category,
+          filesCount: chunk.files.length,
+          errorMessage: error instanceof Error ? error.message : String(error)
+        });
+      }
+      // Add fallback data for this chunk category
+      mergeAnalysisResults(analysis, getDefaultResultForCategory(chunk.category), chunk.category);
     }
   }
   
@@ -102,6 +115,44 @@ export async function analyzeFunctionality(
   
   // Fill in any missing fields with defaults
   return fillAnalysisDefaults(analysis);
+}
+
+/**
+ * Get default result for a failed chunk analysis
+ */
+function getDefaultResultForCategory(category: string): any {
+  switch (category) {
+    case 'entry':
+      return {
+        appPurpose: 'Analysis failed - manual review required',
+        initialization: []
+      };
+    case 'state':
+      return {
+        middleware: ['Redux'],
+        stateShape: {},
+        keyActions: [],
+        selectors: []
+      };
+    case 'components':
+      return {
+        userFeatures: [],
+        interactions: []
+      };
+    case 'services':
+      return {
+        dataSource: [],
+        operations: [],
+        dataFormat: null
+      };
+    case 'dependencies':
+      return {
+        coreDependencies: [],
+        tsEquivalents: {}
+      };
+    default:
+      return {};
+  }
 }
 
 /**
