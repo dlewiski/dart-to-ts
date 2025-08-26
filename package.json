@@ -1,0 +1,15 @@
+{
+  "name": "dart-to-ts-analyzer",
+  "version": "1.0.0",
+  "description": "Dart to TypeScript application analyzer",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "analyze": "pnpm build && node dist/index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

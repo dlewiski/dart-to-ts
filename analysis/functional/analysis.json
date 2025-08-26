@@ -1,0 +1,100 @@
+{
+  "appPurpose": "Dashboard displaying deployed versions of frontend applications across environments",
+  "coreFeatures": [
+    "Real-time version display across multiple environments",
+    "Package dependency tracking",
+    "Search and filter by package name",
+    "Bookmark frequently used searches",
+    "Toggle between card and table view"
+  ],
+  "userWorkflows": [
+    {
+      "name": "Search for Package",
+      "steps": [
+        "User types in search box",
+        "Redux action dispatched",
+        "State filtered by query",
+        "UI updates to show matching packages"
+      ]
+    },
+    {
+      "name": "View Dependencies",
+      "steps": [
+        "User clicks on package card",
+        "Accordion expands",
+        "Dependencies fetched if not cached",
+        "Dependency list displayed"
+      ]
+    }
+  ],
+  "dataFlow": {
+    "sources": [
+      "FEWS API",
+      "Dependencies Service",
+      "Local Storage"
+    ],
+    "transformations": [
+      "Version parsing",
+      "Dependency resolution",
+      "Filter application"
+    ],
+    "destinations": [
+      "Card components",
+      "Table view",
+      "Local storage cache"
+    ]
+  },
+  "stateManagement": {
+    "pattern": "Redux with middleware",
+    "stateShape": {
+      "query": "string",
+      "deploys": "Map<Deploy, DeployState>",
+      "bookmarks": "List<Bookmark>",
+      "recentSearches": "List<string>",
+      "viewMode": "cards | table"
+    },
+    "keyActions": [
+      "SET_QUERY",
+      "FETCH_VERSIONS",
+      "ADD_BOOKMARK",
+      "TOGGLE_VIEW"
+    ],
+    "selectors": [
+      "filteredPackages",
+      "appVersionSelector",
+      "packagesSelector"
+    ]
+  },
+  "businessLogic": {
+    "rules": [
+      "Version comparison using semantic versioning",
+      "Environment-specific version display",
+      "Dependency resolution and filtering"
+    ],
+    "validations": [
+      "Valid package names",
+      "Version format validation",
+      "Bookmark uniqueness"
+    ],
+    "calculations": [
+      "Version difference detection",
+      "Dependency graph resolution"
+    ]
+  },
+  "dependencies": {
+    "dart": [
+      "over_react",
+      "redux",
+      "built_value",
+      "w_transport",
+      "unify_ui"
+    ],
+    "tsEquivalents": {
+      "over_react": "react",
+      "redux": "@reduxjs/toolkit",
+      "built_value": "TypeScript interfaces + immer",
+      "w_transport": "axios",
+      "unify_ui": "Custom component library or MUI"
+    }
+  }
+}

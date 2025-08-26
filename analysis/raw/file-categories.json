@@ -1,0 +1,43 @@
+{
+  "components": [
+    "lib/src/ui/components/app_card.dart",
+    "lib/src/ui/components/app_dropdown.dart",
+    "lib/src/ui/components/bookmark.dart",
+    "lib/src/ui/components/bookmark_chips.dart",
+    "lib/src/ui/components/clear_filters.dart",
+    "lib/src/ui/components/deploy_card.dart",
+    "lib/src/ui/components/deploy_cards_wrapper.dart",
+    "lib/src/ui/components/deploy_dropdown.dart",
+    "lib/src/ui/components/package_filter.dart",
+    "lib/src/ui/components/package_region.dart",
+    "lib/src/ui/components/versions_table.dart",
+    "lib/src/ui/components/view_toggle.dart",
+    "lib/src/ui/release_dashboard_ui.dart"
+  ],
+  "state": [
+    "lib/src/redux/actions.dart",
+    "lib/src/redux/middleware.dart",
+    "lib/src/redux/reducers.dart",
+    "lib/src/redux/selectors.dart",
+    "lib/src/redux/state.dart",
+    "lib/src/redux/state.g.dart",
+    "lib/src/redux/table_selectors.dart"
+  ],
+  "services": [
+    "lib/http_services.dart",
+    "lib/mock_services.dart",
+    "lib/src/services/abstract_dependencies_service.dart",
+    "lib/src/services/abstract_fews_service.dart",
+    "lib/src/services/http_dependencies_service.dart",
+    "lib/src/services/http_fews_service.dart",
+    "lib/src/services/mock_dependencies_service.dart",
+    "lib/src/services/mock_fews_service.dart",
+    "lib/src/services/utils.dart"
+  ],
+  "utils": [
+    "lib/src/utils/local_storage_utils.dart",
+    "lib/src/utils/version_utils.dart"
+  ],
+  "entry": "web/main.dart",
+  "models": []
+}
