@@ -1,100 +1,126 @@
 {
-  "appPurpose": "Dashboard displaying deployed versions of frontend applications across environments",
+  "appPurpose": "A web-based release dashboard application for tracking and managing software releases",
   "coreFeatures": [
-    "Real-time version display across multiple environments",
-    "Package dependency tracking",
-    "Search and filter by package name",
-    "Bookmark frequently used searches",
-    "Toggle between card and table view"
+    "Set up browser transport platform",
+    "Remove loading frame",
+    "Configure environment-based services",
+    "Initialize ReleaseDashboard component",
+    "View application versions and packages in expandable cards",
+    "Select/deselect apps from dropdown with checkboxes",
+    "Save current search selection as a bookmark",
+    "Expand/collapse accordion sections to view package details"
   ],
   "userWorkflows": [
     {
-      "name": "Search for Package",
+      "name": "User Interactions",
       "steps": [
-        "User types in search box",
-        "Redux action dispatched",
-        "State filtered by query",
-        "UI updates to show matching packages"
-      ]
-    },
-    {
-      "name": "View Dependencies",
-      "steps": [
-        "User clicks on package card",
-        "Accordion expands",
-        "Dependencies fetched if not cached",
-        "Dependency list displayed"
+        "onClick handlers for accordion expansion",
+        "onClick handlers for checkbox selection/deselection",
+        "onClick handler for bookmark button",
+        "onChange handler for bookmark name input",
+        "onClose handler for bookmark menu"
       ]
     }
   ],
   "dataFlow": {
     "sources": [
-      "FEWS API",
-      "Dependencies Service",
-      "Local Storage"
+      "HTTP service endpoints",
+      "Mock data sources"
     ],
     "transformations": [
-      "Version parsing",
-      "Dependency resolution",
-      "Filter application"
+      "fetchForPackage async operation"
     ],
     "destinations": [
-      "Card components",
-      "Table view",
-      "Local storage cache"
+      "API responses"
     ]
   },
   "stateManagement": {
-    "pattern": "Redux with middleware",
+    "pattern": "fetchDashboardDataMiddleware - dispatches FetchAppsForDeployAction for all deploys, fetchAppsForDeployMiddleware - async API calls to FewsService, applyBookmarkMiddleware - applies bookmark selections and updates URL, filterUrlMiddleware - syncs filter/selection state to URL query parameters, urlStateSyncMiddleware - restores state from URL on initialization, clearAllFiltersMiddleware - clears all filters and updates URL",
     "stateShape": {
-      "query": "string",
-      "deploys": "Map<Deploy, DeployState>",
-      "bookmarks": "List<Bookmark>",
-      "recentSearches": "List<string>",
-      "viewMode": "cards | table"
+      "query": "nullable String - user's current package filter query",
+      "deploys": "BuiltMap<WdeskDeploy, DeployState> - map of deploy environments to their state",
+      "recentSearches": "BuiltList<String> - list of recent search queries (max 5)",
+      "bookmarks": "BuiltList<SearchBookmark> - list of saved search bookmarks",
+      "selectedDeploys": "BuiltList<WdeskDeploy> - currently selected deployment environments",
+      "selectedDeploysApps": "BuiltList<String> - apps from selected deploys",
+      "selectedApps": "BuiltList<String> - currently selected applications",
+      "clearFiltersActionCounter": "nullable int - counter for filter clear actions",
+      "viewMode": "ViewMode enum - current view mode (cards or table)",
+      "versionThreshold": "nullable String - minimum version filter threshold"
     },
     "keyActions": [
-      "SET_QUERY",
-      "FETCH_VERSIONS",
-      "ADD_BOOKMARK",
-      "TOGGLE_VIEW"
+      "FetchDashboardDataAction",
+      "FetchAppsForDeployAction",
+      "FetchedAppsForDeployAction",
+      "FailedFetchAppsForDeployAction",
+      "QueryUpdatedAction",
+      "AddRecentSearchAction",
+      "AddBookmarkAction",
+      "RemoveBookmarkAction",
+      "SelectDeployAction",
+      "SelectAppAction",
+      "DeselectDeployAction",
+      "DeselectAppAction",
+      "SetSelectedDeploysAction",
+      "SetSelectedAppsAction",
+      "ClearAllFiltersAction",
+      "UpdateClearFiltersCounterAction",
+      "ApplyBookmarkAction",
+      "SetViewModeAction",
+      "SetVersionThresholdAction",
+      "ClearVersionThresholdAction"
     ],
     "selectors": [
-      "filteredPackages",
+      "appSelector",
+      "appNamesSelector",
       "appVersionSelector",
-      "packagesSelector"
+      "hasFetchingDeployErrorSelector",
+      "appDependenciesSelector",
+      "packageNamesSelector",
+      "packagesSelector",
+      "packageSelector",
+      "packageVersionSelector",
+      "packageDependenciesSelector",
+      "selectedDeploysSelector",
+      "appsForSelectedDeploysSelector",
+      "selectedAppsSelector",
+      "fetchAllAppsSelector"
     ]
   },
   "businessLogic": {
-    "rules": [
-      "Version comparison using semantic versioning",
-      "Environment-specific version display",
-      "Dependency resolution and filtering"
-    ],
-    "validations": [
-      "Valid package names",
-      "Version format validation",
-      "Bookmark uniqueness"
-    ],
-    "calculations": [
-      "Version difference detection",
-      "Dependency graph resolution"
-    ]
+    "rules": [],
+    "validations": [],
+    "calculations": []
   },
   "dependencies": {
     "dart": [
       "over_react",
       "redux",
       "built_value",
+      "built_collection",
       "w_transport",
+      "fluri",
+      "collection",
+      "meta",
       "unify_ui"
     ],
     "tsEquivalents": {
       "over_react": "react",
       "redux": "@reduxjs/toolkit",
-      "built_value": "TypeScript interfaces + immer",
+      "built_value": "immer + TypeScript interfaces",
+      "built_collection": "immutable",
+      "collection": "lodash",
+      "fluri": "url-parse",
+      "meta": "TypeScript decorators/annotations",
       "w_transport": "axios",
-      "unify_ui": "Custom component library or MUI"
+      "build_runner": "vite",
+      "build_web_compilers": "typescript",
+      "glob": "glob",
+      "built_value_generator": "TypeScript compiler",
+      "dart_dev": "npm scripts",
+      "dependency_validator": "npm audit",
+      "workiva_analysis_options": "eslint + prettier",
+      "over_react_format": "prettier + eslint-plugin-react"
     }
   }
 }

@@ -1,85 +1,70 @@
 # Dart Application Functional Analysis Report
 
 ## Application Purpose
-
-Dashboard displaying deployed versions of frontend applications across environments
+A web-based release dashboard application for tracking and managing software releases
 
 ## Core Features
-
-- Real-time version display across multiple environments
-- Package dependency tracking
-- Search and filter by package name
-- Bookmark frequently used searches
-- Toggle between card and table view
+- Set up browser transport platform
+- Remove loading frame
+- Configure environment-based services
+- Initialize ReleaseDashboard component
+- View application versions and packages in expandable cards
+- Select/deselect apps from dropdown with checkboxes
+- Save current search selection as a bookmark
+- Expand/collapse accordion sections to view package details
 
 ## User Workflows
 
-### Search for Package
-
-1. User types in search box
-2. Redux action dispatched
-3. State filtered by query
-4. UI updates to show matching packages
-
-### View Dependencies
-
-1. User clicks on package card
-2. Accordion expands
-3. Dependencies fetched if not cached
-4. Dependency list displayed
+### User Interactions
+1. onClick handlers for accordion expansion
+2. onClick handlers for checkbox selection/deselection
+3. onClick handler for bookmark button
+4. onChange handler for bookmark name input
+5. onClose handler for bookmark menu
 
 ## Data Architecture
-
 ### Sources
-
-- FEWS API
-- Dependencies Service
-- Local Storage
+- HTTP service endpoints
+- Mock data sources
 
 ### Transformations
-
-- Version parsing
-- Dependency resolution
-- Filter application
+- fetchForPackage async operation
 
 ### Destinations
-
-- Card components
-- Table view
-- Local storage cache
+- API responses
 
 ## State Management
-
-- **Pattern**: Redux with middleware
-- **Key Actions**: SET_QUERY, FETCH_VERSIONS, ADD_BOOKMARK, TOGGLE_VIEW
-- **Selectors**: filteredPackages, appVersionSelector, packagesSelector
+- **Pattern**: fetchDashboardDataMiddleware - dispatches FetchAppsForDeployAction for all deploys, fetchAppsForDeployMiddleware - async API calls to FewsService, applyBookmarkMiddleware - applies bookmark selections and updates URL, filterUrlMiddleware - syncs filter/selection state to URL query parameters, urlStateSyncMiddleware - restores state from URL on initialization, clearAllFiltersMiddleware - clears all filters and updates URL
+- **Key Actions**: FetchDashboardDataAction, FetchAppsForDeployAction, FetchedAppsForDeployAction, FailedFetchAppsForDeployAction, QueryUpdatedAction, AddRecentSearchAction, AddBookmarkAction, RemoveBookmarkAction, SelectDeployAction, SelectAppAction, DeselectDeployAction, DeselectAppAction, SetSelectedDeploysAction, SetSelectedAppsAction, ClearAllFiltersAction, UpdateClearFiltersCounterAction, ApplyBookmarkAction, SetViewModeAction, SetVersionThresholdAction, ClearVersionThresholdAction
+- **Selectors**: appSelector, appNamesSelector, appVersionSelector, hasFetchingDeployErrorSelector, appDependenciesSelector, packageNamesSelector, packagesSelector, packageSelector, packageVersionSelector, packageDependenciesSelector, selectedDeploysSelector, appsForSelectedDeploysSelector, selectedAppsSelector, fetchAllAppsSelector
 
 ## Business Logic
-
 ### Rules
 
-- Version comparison using semantic versioning
-- Environment-specific version display
-- Dependency resolution and filtering
 
 ### Validations
 
-- Valid package names
-- Version format validation
-- Bookmark uniqueness
 
 ## Dependency Mapping
-
 - **over_react** → react
 - **redux** → @reduxjs/toolkit
-- **built_value** → TypeScript interfaces + immer
+- **built_value** → immer + TypeScript interfaces
+- **built_collection** → immutable
+- **collection** → lodash
+- **fluri** → url-parse
+- **meta** → TypeScript decorators/annotations
 - **w_transport** → axios
-- **unify_ui** → Custom component library or MUI
+- **build_runner** → vite
+- **build_web_compilers** → typescript
+- **glob** → glob
+- **built_value_generator** → TypeScript compiler
+- **dart_dev** → npm scripts
+- **dependency_validator** → npm audit
+- **workiva_analysis_options** → eslint + prettier
+- **over_react_format** → prettier + eslint-plugin-react
 
 ## Conversion Strategy
-
 Based on this analysis, the TypeScript conversion should:
-
 1. Implement Redux Toolkit for state management
 2. Use React functional components with hooks
 3. Create TypeScript interfaces for all data models

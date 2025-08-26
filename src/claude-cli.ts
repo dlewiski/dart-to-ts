@@ -92,7 +92,8 @@ function executeClaudeSpawn(
   return new Promise((resolve, reject) => {
     const child = spawn('claude', args, {
       env: process.env,
-      shell: false // Prevent shell injection
+      shell: false, // Prevent shell injection
+      stdio: ['pipe', 'pipe', 'pipe'] // Explicit stdio configuration
     });
 
     let stdout = '';
@@ -100,9 +101,21 @@ function executeClaudeSpawn(
     const maxOutputSize = 10 * 1024 * 1024; // 10MB limit
     let outputSize = 0;
 
-    // Write prompt to stdin
-    child.stdin.write(prompt);
-    child.stdin.end();
+    // Handle stdin errors
+    child.stdin.on('error', (error) => {
+      console.error('[Claude CLI] stdin error:', error);
+      reject(error);
+    });
+
+    // Write prompt to stdin with proper encoding
+    child.stdin.write(prompt, 'utf-8', (err) => {
+      if (err) {
+        console.error('[Claude CLI] Failed to write to stdin:', err);
+        reject(err);
+      } else {
+        child.stdin.end();
+      }
+    });
 
     child.stdout.on('data', (data) => {
       outputSize += data.length;
