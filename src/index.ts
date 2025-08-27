@@ -51,6 +51,16 @@ if (require.main === module) {
       'Timeout for analysis in seconds (default: 600)',
       '600'
     )
+    .option(
+      '-p, --parallel',
+      'Enable parallel processing for faster analysis',
+      false
+    )
+    .option(
+      '-w, --workers <count>',
+      'Number of parallel workers (default: 4)',
+      '4'
+    )
     .action((projectPath: string, options: any) => {
       const cliOptions: CLIOptions = {
         comprehensive: options.comprehensive,
@@ -58,6 +68,8 @@ if (require.main === module) {
         noCache: !options.cache,
         model: options.model as 'sonnet' | 'opus',
         timeout: parseInt(options.timeout) * 1000, // Convert seconds to milliseconds
+        parallel: options.parallel,
+        workers: parseInt(options.workers),
       };
 
       // Validate model option
