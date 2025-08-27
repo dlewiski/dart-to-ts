@@ -1,65 +1,7 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import { type FileCategories } from './scanner';
-import {
-  type CodeChunk,
-  type CodeFile,
-  FILE_SIZE_LIMITS,
-  FileSizeError,
-} from './types';
-
-/**
- * Validate that a path is safe and within the project directory
- */
-function validatePath(projectPath: string, relativePath: string): string {
-  const fullPath = path.resolve(projectPath, relativePath);
-  const projectRealPath = path.resolve(projectPath);
-
-  // Ensure the resolved path is within the project directory
-  if (!fullPath.startsWith(projectRealPath)) {
-    throw new Error(`Path traversal detected: ${relativePath}`);
-  }
-
-  return fullPath;
-}
-
-/**
- * Validate file size is within acceptable limits
- */
-async function validateFileSize(filePath: string): Promise<void> {
-  const stats = await fs.promises.stat(filePath);
-  if (stats.size > FILE_SIZE_LIMITS.MAX_FILE_SIZE) {
-    throw new FileSizeError(
-      path.basename(filePath),
-      stats.size,
-      FILE_SIZE_LIMITS.MAX_FILE_SIZE
-    );
-  }
-}
-
-/**
- * Async read file with path validation
- */
-async function readFileAsync(
-  projectPath: string,
-  relativePath: string
-): Promise<string> {
-  const fullPath = validatePath(projectPath, relativePath);
-  await validateFileSize(fullPath);
-  return fs.promises.readFile(fullPath, 'utf-8');
-}
-
-/**
- * Check if file exists (async)
- */
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.promises.access(filePath, fs.constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { type FileCategories } from './types';
+import { safeReadFile, fileExists } from './utils/file-operations';
+import { type CodeChunk, type CodeFile, FILE_SIZE_LIMITS } from './types';
 
 /**
  * Extract code chunks for analysis with async file operations
@@ -79,7 +21,7 @@ export async function extractCodeForAnalysis(
         files: [
           {
             path: categories.entry,
-            content: await readFileAsync(projectPath, categories.entry),
+            content: await safeReadFile(projectPath, categories.entry),
           },
         ],
         context: 'Main entry point - app initialization and setup',
@@ -97,7 +39,7 @@ export async function extractCodeForAnalysis(
     const stateFiles = await Promise.all(
       categories.state.slice(0, 5).map(async (file) => {
         try {
-          const content = await readFileAsync(projectPath, file);
+          const content = await safeReadFile(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
@@ -133,7 +75,7 @@ export async function extractCodeForAnalysis(
     const componentFiles = await Promise.all(
       categories.components.slice(0, 3).map(async (file) => {
         try {
-          const content = await readFileAsync(projectPath, file);
+          const content = await safeReadFile(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
@@ -174,7 +116,7 @@ export async function extractCodeForAnalysis(
     const serviceFiles = await Promise.all(
       categories.services.slice(0, 3).map(async (file) => {
         try {
-          const content = await readFileAsync(projectPath, file);
+          const content = await safeReadFile(projectPath, file);
           totalSize += Buffer.byteLength(content, 'utf-8');
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
@@ -216,7 +158,10 @@ export async function extractCodeForAnalysis(
         files: [
           {
             path: 'pubspec.yaml',
-            content: await fs.promises.readFile(pubspecPath, 'utf-8'),
+            content: await safeReadFile(
+              path.dirname(pubspecPath),
+              'pubspec.yaml'
+            ),
           },
         ],
         context: 'Project dependencies and configuration',

@@ -26,7 +26,12 @@ export async function analyzeFunctionality(
   chunks: CodeChunk[],
   options: AnalysisOptions = {}
 ): Promise<FunctionalAnalysis> {
-  const { useCache = true, verbose = false, model = 'sonnet', timeout } = options;
+  const {
+    useCache = true,
+    verbose = false,
+    model = 'sonnet',
+    timeout,
+  } = options;
 
   console.log(
     `\n🧠 Analyzing ${chunks.length} code chunks using Claude (model: ${model})...\n`
@@ -53,7 +58,11 @@ export async function analyzeFunctionality(
 
       if (!result) {
         // Analyze based on category
-        result = await analyzeChunkByCategory(chunk, { model, verbose, timeout });
+        result = await analyzeChunkByCategory(chunk, {
+          model,
+          verbose,
+          timeout,
+        });
 
         // Cache the result
         if (useCache && result) {
