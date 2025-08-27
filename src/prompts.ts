@@ -140,7 +140,7 @@ Return ONLY the JSON object, no explanation.`,
    * Comprehensive analysis combining all aspects
    */
   comprehensiveAnalysis: (
-    chunks: Array<{ category: string; code: string }>
+    chunks: Array<{ category: string; code: string }>,
   ) => {
     const chunkSections = chunks
       .map((chunk) => `[${chunk.category.toUpperCase()}]\n${chunk.code}`)
@@ -196,7 +196,7 @@ Return ONLY the JSON object, no explanation.`;
 export function createCustomPrompt(
   instruction: string,
   code: string,
-  schema: SchemaDefinition
+  schema: SchemaDefinition,
 ): string {
   return `
 ${instruction}

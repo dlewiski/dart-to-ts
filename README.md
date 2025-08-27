@@ -112,23 +112,26 @@ deno run --allow-read --allow-write --allow-env --allow-net --allow-run main.ts
 
 This application requires the following Deno permissions:
 
-| Permission | Reason |
-|------------|--------|
-| `--allow-read` | Read project files and cache |
-| `--allow-write` | Write analysis results and cache |
-| `--allow-env` | Access environment variables |
-| `--allow-net` | Claude CLI may need network access |
-| `--allow-run` | Execute Claude CLI subprocess |
+| Permission      | Reason                             |
+| --------------- | ---------------------------------- |
+| `--allow-read`  | Read project files and cache       |
+| `--allow-write` | Write analysis results and cache   |
+| `--allow-env`   | Access environment variables       |
+| `--allow-net`   | Claude CLI may need network access |
+| `--allow-run`   | Execute Claude CLI subprocess      |
 
 ## 📊 Output
 
 The analyzer generates three main outputs in the `analysis/` directory:
 
 ### 1. file-categories.json
+
 Raw categorization of Dart files by type (components, services, state, etc.)
 
 ### 2. analysis.json
+
 Structured functional analysis including:
+
 - Application purpose
 - Core features
 - User workflows
@@ -137,6 +140,7 @@ Structured functional analysis including:
 - Dependencies and TypeScript equivalents
 
 ### 3. report.md
+
 Human-readable Markdown report with comprehensive analysis
 
 ## 🔄 Migration from Node.js
@@ -155,16 +159,16 @@ This project has been migrated from Node.js to Deno with significant improvement
 
 ### Technical Changes
 
-| Component | Node.js Version | Deno Version |
-|-----------|----------------|--------------|
-| Entry Point | `src/index.ts` | `main.ts` |
-| Dependencies | `package.json` + `node_modules` | `deps.ts` + `deno.json` |
-| CLI Framework | Commander | Cliffy |
-| File Operations | Node.js fs module | Deno APIs |
-| Process Management | child_process | Deno.Command |
-| Testing | Custom runner | Deno's built-in test runner |
-| Crypto | Node crypto module | Web Crypto API |
-| Path Operations | Node path module | @std/path |
+| Component          | Node.js Version                 | Deno Version                |
+| ------------------ | ------------------------------- | --------------------------- |
+| Entry Point        | `src/index.ts`                  | `main.ts`                   |
+| Dependencies       | `package.json` + `node_modules` | `deps.ts` + `deno.json`     |
+| CLI Framework      | Commander                       | Cliffy                      |
+| File Operations    | Node.js fs module               | Deno APIs                   |
+| Process Management | child_process                   | Deno.Command                |
+| Testing            | Custom runner                   | Deno's built-in test runner |
+| Crypto             | Node crypto module              | Web Crypto API              |
+| Path Operations    | Node path module                | @std/path                   |
 
 ## 🧪 Testing
 
@@ -186,6 +190,7 @@ deno test test/claude-integration.test.ts
 The analyzer recognizes and converts these Dart web patterns:
 
 ### Web Application Entry Points
+
 ```dart
 // web/main.dart
 import 'dart:html' as html;
@@ -196,6 +201,7 @@ void main() {
 ```
 
 ### HTTP Services
+
 ```dart
 // Converts w_transport to axios/fetch patterns
 class ApiService {
@@ -206,6 +212,7 @@ class ApiService {
 ```
 
 ### State Management
+
 ```dart
 // Redux pattern analysis and conversion guidance
 final store = Store<AppState>(

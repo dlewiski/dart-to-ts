@@ -1,17 +1,17 @@
 import { join, resolve } from '../../deps.ts';
 import {
-  pathExists,
   ensureDirectoryExists,
+  filterDirectoryByExtension,
+  pathExists,
   readFileSync,
-  writeFileSync,
-  filterDirectory,
   unlinkSync,
+  writeFileSync,
 } from './file-operations.ts';
 import {
-  type CacheOptions,
   type CachedResponse,
-  type UsageInfo,
+  type CacheOptions,
   type ClaudeApiResponse,
+  type UsageInfo,
 } from '../types/index.ts';
 
 /**
@@ -34,19 +34,25 @@ export class ResponseCache {
   /**
    * Generate a cache key from prompt
    */
-  private async getCacheKey(prompt: string, options?: CacheOptions): Promise<string> {
+  private async getCacheKey(
+    prompt: string,
+    options?: CacheOptions,
+  ): Promise<string> {
     const content = JSON.stringify({ prompt, options });
     const encoder = new TextEncoder();
     const data = encoder.encode(content);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   /**
    * Get cached response if available and not expired
    */
-  async get<T = unknown>(prompt: string, options?: CacheOptions): Promise<T | null> {
+  async get<T = unknown>(
+    prompt: string,
+    options?: CacheOptions,
+  ): Promise<T | null> {
     const key = await this.getCacheKey(prompt, options);
     const cachePath = join(this.cacheDir, `${key}.json`);
 
@@ -65,7 +71,7 @@ export class ResponseCache {
         } catch (unlinkError) {
           console.warn(
             '[Cache] Failed to remove expired cache file:',
-            unlinkError
+            unlinkError,
           );
         }
         return null;
@@ -81,7 +87,11 @@ export class ResponseCache {
   /**
    * Store response in cache
    */
-  async set(prompt: string, response: unknown, options?: CacheOptions): Promise<void> {
+  async set(
+    prompt: string,
+    response: unknown,
+    options?: CacheOptions,
+  ): Promise<void> {
     const key = await this.getCacheKey(prompt, options);
     const cachePath = join(this.cacheDir, `${key}.json`);
 
@@ -103,11 +113,9 @@ export class ResponseCache {
    * Clear all cache
    */
   clear(): void {
-    const files = filterDirectory(this.cacheDir, '.json');
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        unlinkSync(join(this.cacheDir, file));
-      }
+    const jsonFiles = filterDirectoryByExtension(this.cacheDir, '.json');
+    for (const file of jsonFiles) {
+      unlinkSync(join(this.cacheDir, file));
     }
   }
 }
@@ -118,7 +126,7 @@ export class ResponseCache {
 export function chunkCode(
   code: string,
   maxChunkSize = 10000,
-  overlap = 200
+  overlap = 200,
 ): string[] {
   if (code.length <= maxChunkSize) {
     return [code];
@@ -160,7 +168,7 @@ export class ProgressIndicator {
     this.startTime = Date.now();
   }
 
-  update(current: number, message?: string): void {
+  async update(current: number, message?: string): Promise<void> {
     const now = Date.now();
 
     // Update at most once per second
@@ -177,9 +185,10 @@ export class ProgressIndicator {
     const progressBar = this.createProgressBar(percentage);
     const status = message || `Processing...`;
 
-    process.stdout.write(
-      `\r${progressBar} ${percentage}% | ${current}/${this.total} | ${status} | ETA: ${remaining}s  `
-    );
+    // Use Deno's stdout.write instead of Node.js process.stdout.write
+    const progressText =
+      `\r${progressBar} ${percentage}% | ${current}/${this.total} | ${status} | ETA: ${remaining}s  `;
+    await Deno.stdout.write(new TextEncoder().encode(progressText));
   }
 
   private createProgressBar(percentage: number): string {
@@ -205,7 +214,7 @@ export function cleanJsonResponse(text: string): unknown {
   // Remove any text before the first { or [
   const jsonStart = Math.min(
     text.indexOf('{') !== -1 ? text.indexOf('{') : Infinity,
-    text.indexOf('[') !== -1 ? text.indexOf('[') : Infinity
+    text.indexOf('[') !== -1 ? text.indexOf('[') : Infinity,
   );
 
   if (jsonStart === Infinity) {
@@ -281,18 +290,18 @@ export function extractUsageInfo(jsonResponse: unknown): UsageInfo {
   const cost = response.total_cost_usd;
 
   const result: UsageInfo = {};
-  
+
   if (usage.input_tokens !== undefined) {
     result.inputTokens = usage.input_tokens;
   }
-  
+
   if (usage.output_tokens !== undefined) {
     result.outputTokens = usage.output_tokens;
   }
-  
+
   if (cost) {
     result.cost = String(cost);
   }
-  
+
   return result;
 }

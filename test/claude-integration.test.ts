@@ -1,8 +1,8 @@
 /**
  * Integration tests for Claude CLI
  */
-import { describe, it, assertEquals } from '../deps.ts';
-import { executeClaude, analyzeCode } from '../src/claude-cli.ts';
+import { assertEquals, describe, it } from '../deps.ts';
+import { analyzeCode, executeClaude } from '../src/claude-cli.ts';
 import { analysisPrompts } from '../src/prompts.ts';
 import { cleanJsonResponse } from '../src/utils/claude-utils.ts';
 
@@ -20,7 +20,7 @@ describe('Claude CLI Integration Tests', () => {
       {
         model: 'sonnet',
         maxRetries: 1,
-      }
+      },
     );
 
     assertEquals(result.error, undefined);
@@ -137,8 +137,9 @@ Some trailing text
 
     const cleaned = cleanJsonResponse(messyJson);
     assertEquals(typeof cleaned, 'object');
-    assertEquals((cleaned as any).test, 'value');
-    assertEquals((cleaned as any).nested.field, 123);
+    const cleanedObj = cleaned as Record<string, unknown>;
+    assertEquals(cleanedObj.test, 'value');
+    assertEquals((cleanedObj.nested as Record<string, unknown>).field, 123);
   });
 });
 

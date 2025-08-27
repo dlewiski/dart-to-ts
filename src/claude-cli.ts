@@ -1,9 +1,9 @@
 import {
+  type AnalysisSchema,
   type ClaudeOptions,
   type ClaudeResponse,
-  type AnalysisSchema,
-  TIMEOUTS,
   TimeoutError,
+  TIMEOUTS,
 } from './types/index.ts';
 
 /**
@@ -11,7 +11,7 @@ import {
  */
 export async function executeClaude(
   prompt: string,
-  options: ClaudeOptions = {}
+  options: ClaudeOptions = {},
 ): Promise<ClaudeResponse> {
   const {
     model = 'sonnet',
@@ -34,7 +34,12 @@ export async function executeClaude(
         console.log(`[Claude CLI] Attempt ${attempt}/${maxRetries}...`);
       }
 
-      const result = await executeClaudeSubprocess(prompt, args, verbose, timeout);
+      const result = await executeClaudeSubprocess(
+        prompt,
+        args,
+        verbose,
+        timeout,
+      );
 
       if (outputFormat === 'json') {
         try {
@@ -54,8 +59,9 @@ export async function executeClaude(
       return { result: result.trim(), raw: result };
     } catch (error) {
       if (attempt === maxRetries) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
         return {
           result: null,
           error: `Failed after ${maxRetries} attempts: ${errorMessage}`,
@@ -81,7 +87,7 @@ async function executeClaudeSubprocess(
   prompt: string,
   args: string[],
   verbose: boolean,
-  timeout: number = TIMEOUTS.CLAUDE_CLI
+  timeout: number = TIMEOUTS.CLAUDE_CLI,
 ): Promise<string> {
   const command = new Deno.Command('claude', {
     args,
@@ -136,7 +142,7 @@ async function executeClaudeSubprocess(
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    
+
     if (error instanceof Error && error.message.includes('timed out')) {
       throw new TimeoutError('Claude CLI execution', timeout);
     }
@@ -151,10 +157,12 @@ export async function analyzeCode(
   code: string,
   analysisType: string,
   schema?: AnalysisSchema,
-  options: ClaudeOptions = {}
+  options: ClaudeOptions = {},
 ): Promise<unknown> {
   const schemaInstruction = schema
-    ? `Return ONLY a valid JSON object matching this schema: ${JSON.stringify(schema)}`
+    ? `Return ONLY a valid JSON object matching this schema: ${
+      JSON.stringify(schema)
+    }`
     : 'Return ONLY valid JSON';
 
   const prompt = `
@@ -186,8 +194,7 @@ ${code}
  */
 function extractAndValidateJson(text: string): unknown {
   // Try to extract JSON from markdown code blocks
-  const jsonMatch =
-    text.match(/```json\n?([\s\S]*?)\n?```/) ||
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) ||
     text.match(/```\n?([\s\S]*?)\n?```/) ||
     text.match(/({[\s\S]*})/);
 
@@ -212,10 +219,10 @@ function extractAndValidateJson(text: string): unknown {
   } catch {
     // Return the raw text if all parsing attempts fail
     console.warn(
-      '[Claude CLI] Could not parse JSON from response, returning raw text'
+      '[Claude CLI] Could not parse JSON from response, returning raw text',
     );
   }
-  
+
   return text;
 }
 

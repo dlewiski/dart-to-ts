@@ -1,10 +1,4 @@
-import { 
-  resolve, 
-  dirname, 
-  basename,
-  ensureDir,
-  exists
-} from '../../deps.ts';
+import { basename, dirname, ensureDir, exists, resolve } from '../../deps.ts';
 import { FILE_SIZE_LIMITS, FileSizeError } from '../types/index.ts';
 
 /**
@@ -17,7 +11,7 @@ import { FILE_SIZE_LIMITS, FileSizeError } from '../types/index.ts';
  */
 export function validatePath(
   projectPath: string,
-  relativePath: string
+  relativePath: string,
 ): string {
   const fullPath = resolve(projectPath, relativePath);
   const projectRealPath = resolve(projectPath);
@@ -39,7 +33,7 @@ export async function validateFileSize(filePath: string): Promise<void> {
     throw new FileSizeError(
       basename(filePath),
       fileInfo.size,
-      FILE_SIZE_LIMITS.MAX_FILE_SIZE
+      FILE_SIZE_LIMITS.MAX_FILE_SIZE,
     );
   }
 }
@@ -49,7 +43,7 @@ export async function validateFileSize(filePath: string): Promise<void> {
  */
 export async function safeReadFile(
   projectPath: string,
-  relativePath: string
+  relativePath: string,
 ): Promise<string> {
   const fullPath = validatePath(projectPath, relativePath);
   await validateFileSize(fullPath);
@@ -60,6 +54,7 @@ export async function safeReadFile(
 
 /**
  * Check if file exists (async)
+ * Alias for exists from std/fs for consistency
  */
 export async function fileExists(filePath: string): Promise<boolean> {
   return await exists(filePath);
@@ -67,6 +62,7 @@ export async function fileExists(filePath: string): Promise<boolean> {
 
 /**
  * Ensure directory exists, creating if necessary
+ * Wrapper for ensureDir from std/fs
  */
 export async function ensureDirectoryExists(dirPath: string): Promise<void> {
   await ensureDir(dirPath);
@@ -75,7 +71,10 @@ export async function ensureDirectoryExists(dirPath: string): Promise<void> {
 /**
  * Safely write file with directory creation
  */
-export async function safeWriteFile(filePath: string, content: string): Promise<void> {
+export async function safeWriteFile(
+  filePath: string,
+  content: string,
+): Promise<void> {
   const dir = dirname(filePath);
   await ensureDirectoryExists(dir);
   const encoder = new TextEncoder();
@@ -85,7 +84,10 @@ export async function safeWriteFile(filePath: string, content: string): Promise<
 /**
  * Safely write JSON file with proper formatting
  */
-export async function safeWriteJsonFile(filePath: string, data: unknown): Promise<void> {
+export async function safeWriteJsonFile(
+  filePath: string,
+  data: unknown,
+): Promise<void> {
   const content = JSON.stringify(data, null, 2);
   await safeWriteFile(filePath, content);
 }
@@ -104,29 +106,39 @@ export function pathExists(filePath: string): boolean {
 
 /**
  * Read directory contents synchronously
+ * Returns array of entry names
  */
 export function readDirectory(dirPath: string): string[] {
-  const entries: string[] = [];
-  for (const entry of Deno.readDirSync(dirPath)) {
-    entries.push(entry.name);
+  const entryNames: string[] = [];
+  for (const dirEntry of Deno.readDirSync(dirPath)) {
+    entryNames.push(dirEntry.name);
   }
-  return entries;
+  return entryNames;
 }
 
 /**
  * Get file/directory stats synchronously
+ * Wrapper for Deno.statSync with better error context
  */
 export function getStats(filePath: string): Deno.FileInfo {
-  return Deno.statSync(filePath);
+  try {
+    return Deno.statSync(filePath);
+  } catch (error) {
+    throw new Error(`Failed to get stats for ${filePath}: ${error}`);
+  }
 }
 
 /**
- * Read file synchronously
+ * Read file synchronously with UTF-8 encoding
  */
 export function readFileSync(filePath: string): string {
-  const decoder = new TextDecoder('utf-8');
-  const data = Deno.readFileSync(filePath);
-  return decoder.decode(data);
+  try {
+    const textDecoder = new TextDecoder('utf-8');
+    const fileData = Deno.readFileSync(filePath);
+    return textDecoder.decode(fileData);
+  } catch (error) {
+    throw new Error(`Failed to read file ${filePath}: ${error}`);
+  }
 }
 
 /**
@@ -138,18 +150,26 @@ export function readJsonFileSync(filePath: string): unknown {
 }
 
 /**
- * Write file synchronously
+ * Write file synchronously with UTF-8 encoding
  */
 export function writeFileSync(filePath: string, content: string): void {
-  const encoder = new TextEncoder();
-  Deno.writeFileSync(filePath, encoder.encode(content));
+  try {
+    const textEncoder = new TextEncoder();
+    Deno.writeFileSync(filePath, textEncoder.encode(content));
+  } catch (error) {
+    throw new Error(`Failed to write file ${filePath}: ${error}`);
+  }
 }
 
 /**
- * Filter directory for specific file types
+ * Filter directory for specific file types by extension
  */
-export function filterDirectory(dirPath: string, extension: string): string[] {
-  return readDirectory(dirPath).filter((file) => file.endsWith(extension));
+export function filterDirectoryByExtension(
+  dirPath: string,
+  fileExtension: string,
+): string[] {
+  const allEntries = readDirectory(dirPath);
+  return allEntries.filter((fileName) => fileName.endsWith(fileExtension));
 }
 
 /**

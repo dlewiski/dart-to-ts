@@ -1,23 +1,97 @@
-import { Command, colors, join } from './deps.ts';
+import { colors, Command, join } from './deps.ts';
 import { AnalysisService } from './src/services/analysis-service.ts';
 import { pathExists } from './src/utils/file-operations.ts';
-import { type CLIOptions } from './src/types/index.ts';
+import { type CLIOptions, type FunctionalAnalysis } from './src/types/index.ts';
 
-async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
+/**
+ * Main analysis function with improved error handling and logging
+ */
+async function analyzeDartApp(
+  projectPath: string,
+  options: CLIOptions = {},
+): Promise<FunctionalAnalysis> {
   const analysisService = new AnalysisService(projectPath);
 
-  // Execute analysis workflow
-  const result = await analysisService.analyze(options);
+  try {
+    // Execute analysis workflow with progress indication
+    console.log(`\n🚀 Starting analysis of: ${projectPath}`);
+    const analysisResult = await analysisService.analyze(options);
 
-  // Save results to files
-  await analysisService.saveResults(result);
+    // Save results to files with detailed reporting
+    const savedPaths = await analysisService.saveResults(analysisResult);
 
-  console.log(colors.green('🎯 Analysis complete! Next steps:'));
+    // Display completion message with next steps
+    displayCompletionSummary(savedPaths);
+
+    return analysisResult.analysis;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(colors.red(`\n❌ Analysis failed: ${errorMessage}`));
+    throw error;
+  }
+}
+
+/**
+ * Display analysis completion summary and next steps
+ */
+function displayCompletionSummary(savedPaths: {
+  categoriesPath: string;
+  analysisPath: string;
+  reportPath: string;
+}): void {
+  console.log(colors.green('\n🎯 Analysis complete! Next steps:'));
   console.log('1. Review the functional analysis');
   console.log('2. Validate understanding with test app');
   console.log('3. Begin TypeScript architecture planning');
 
-  return result.analysis;
+  console.log(colors.cyan('\n📋 Generated files:'));
+  console.log(`- Categories: ${savedPaths.categoriesPath}`);
+  console.log(`- Analysis: ${savedPaths.analysisPath}`);
+  console.log(`- Report: ${savedPaths.reportPath}`);
+}
+
+/**
+ * Prepare and validate analysis configuration
+ */
+async function prepareAnalysisConfig(
+  options: Record<string, unknown>,
+  projectPath?: string,
+): Promise<{ path: string; options: CLIOptions }> {
+  // Determine analysis path
+  const analysisPath = projectPath ||
+    join(Deno.cwd(), 'frontend_release_dashboard');
+
+  // Validate project path exists
+  if (!await pathExists(analysisPath)) {
+    throw new Error(`Project path "${analysisPath}" does not exist.`);
+  }
+
+  // Validate and prepare model option
+  const validatedModel = validateModelOption(options.model as string);
+
+  const cliOptions: CLIOptions = {
+    comprehensive: options.comprehensive as boolean,
+    verbose: options.verbose as boolean,
+    noCache: !options.cache as boolean,
+    model: validatedModel,
+    timeout: (options.timeout as number) * 1000, // Convert seconds to milliseconds
+  };
+
+  return { path: analysisPath, options: cliOptions };
+}
+
+/**
+ * Validate the Claude model option
+ */
+function validateModelOption(modelInput: string): 'sonnet' | 'opus' {
+  const model = modelInput as 'sonnet' | 'opus';
+  const validModels = ['sonnet', 'opus'] as const;
+
+  if (!validModels.includes(model)) {
+    throw new Error(`Invalid model "${model}". Use 'sonnet' or 'opus'.`);
+  }
+
+  return model;
 }
 
 // Main CLI entry point
@@ -30,58 +104,35 @@ if (import.meta.main) {
     .option(
       '-c, --comprehensive',
       'Use comprehensive analysis (slower but more thorough)',
-      { default: false }
+      { default: false },
     )
     .option(
       '-m, --model <model:string>',
       'Choose Claude model: sonnet (default) or opus',
-      { default: 'sonnet' }
+      { default: 'sonnet' },
     )
     .option(
       '-v, --verbose',
       'Show detailed progress and API usage',
-      { default: false }
+      { default: false },
     )
     .option(
       '--no-cache',
       "Don't use cached responses",
-      { default: false }
+      { default: false },
     )
     .option(
       '-t, --timeout <seconds:number>',
       'Timeout for analysis in seconds',
-      { default: 600 }
+      { default: 600 },
     )
     .action(async (options, projectPath?: string) => {
-      // Default project path
-      const analysisPath = projectPath || 
-        join(Deno.cwd(), 'frontend_release_dashboard');
-      
-      // Validate model option
-      const model = options.model as 'sonnet' | 'opus';
-      if (!['sonnet', 'opus'].includes(model)) {
-        console.error(
-          colors.red(`Error: Invalid model "${model}". Use 'sonnet' or 'opus'.`)
-        );
-        Deno.exit(1);
-      }
-
-      // Validate project path exists
-      if (!await pathExists(analysisPath)) {
-        console.error(colors.red(`Error: Project path "${analysisPath}" does not exist.`));
-        Deno.exit(1);
-      }
-
-      const cliOptions: CLIOptions = {
-        comprehensive: options.comprehensive,
-        verbose: options.verbose,
-        noCache: !options.cache,
-        model,
-        timeout: options.timeout * 1000, // Convert seconds to milliseconds
-      };
-
       try {
-        await analyzeDartApp(analysisPath, cliOptions);
+        const analysisConfig = await prepareAnalysisConfig(
+          options,
+          projectPath,
+        );
+        await analyzeDartApp(analysisConfig.path, analysisConfig.options);
       } catch (error) {
         console.error(colors.red('Fatal error during analysis:'), error);
         Deno.exit(1);
