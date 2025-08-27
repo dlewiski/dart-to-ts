@@ -1,6 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { FILE_SIZE_LIMITS, FileSizeError } from '../types';
+import { 
+  resolve, 
+  dirname, 
+  basename,
+  ensureDir,
+  exists
+} from '../../deps.ts';
+import { FILE_SIZE_LIMITS, FileSizeError } from '../types/index.ts';
 
 /**
  * Centralized file operations utility
@@ -14,8 +19,8 @@ export function validatePath(
   projectPath: string,
   relativePath: string
 ): string {
-  const fullPath = path.resolve(projectPath, relativePath);
-  const projectRealPath = path.resolve(projectPath);
+  const fullPath = resolve(projectPath, relativePath);
+  const projectRealPath = resolve(projectPath);
 
   // Ensure the resolved path is within the project directory
   if (!fullPath.startsWith(projectRealPath)) {
@@ -29,11 +34,11 @@ export function validatePath(
  * Validate file size is within acceptable limits
  */
 export async function validateFileSize(filePath: string): Promise<void> {
-  const stats = await fs.promises.stat(filePath);
-  if (stats.size > FILE_SIZE_LIMITS.MAX_FILE_SIZE) {
+  const fileInfo = await Deno.stat(filePath);
+  if (fileInfo.size > FILE_SIZE_LIMITS.MAX_FILE_SIZE) {
     throw new FileSizeError(
-      path.basename(filePath),
-      stats.size,
+      basename(filePath),
+      fileInfo.size,
       FILE_SIZE_LIMITS.MAX_FILE_SIZE
     );
   }
@@ -48,15 +53,49 @@ export async function safeReadFile(
 ): Promise<string> {
   const fullPath = validatePath(projectPath, relativePath);
   await validateFileSize(fullPath);
-  return fs.promises.readFile(fullPath, 'utf-8');
+  const decoder = new TextDecoder('utf-8');
+  const data = await Deno.readFile(fullPath);
+  return decoder.decode(data);
 }
 
 /**
  * Check if file exists (async)
  */
 export async function fileExists(filePath: string): Promise<boolean> {
+  return await exists(filePath);
+}
+
+/**
+ * Ensure directory exists, creating if necessary
+ */
+export async function ensureDirectoryExists(dirPath: string): Promise<void> {
+  await ensureDir(dirPath);
+}
+
+/**
+ * Safely write file with directory creation
+ */
+export async function safeWriteFile(filePath: string, content: string): Promise<void> {
+  const dir = dirname(filePath);
+  await ensureDirectoryExists(dir);
+  const encoder = new TextEncoder();
+  await Deno.writeFile(filePath, encoder.encode(content));
+}
+
+/**
+ * Safely write JSON file with proper formatting
+ */
+export async function safeWriteJsonFile(filePath: string, data: unknown): Promise<void> {
+  const content = JSON.stringify(data, null, 2);
+  await safeWriteFile(filePath, content);
+}
+
+/**
+ * Check if path exists synchronously
+ */
+export function pathExists(filePath: string): boolean {
   try {
-    await fs.promises.access(filePath, fs.constants.F_OK);
+    Deno.statSync(filePath);
     return true;
   } catch {
     return false;
@@ -64,57 +103,30 @@ export async function fileExists(filePath: string): Promise<boolean> {
 }
 
 /**
- * Ensure directory exists, creating if necessary
- */
-export function ensureDirectoryExists(dirPath: string): void {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-}
-
-/**
- * Safely write file with directory creation
- */
-export function safeWriteFile(filePath: string, content: string): void {
-  const dir = path.dirname(filePath);
-  ensureDirectoryExists(dir);
-  fs.writeFileSync(filePath, content);
-}
-
-/**
- * Safely write JSON file with proper formatting
- */
-export function safeWriteJsonFile(filePath: string, data: unknown): void {
-  const content = JSON.stringify(data, null, 2);
-  safeWriteFile(filePath, content);
-}
-
-/**
- * Check if path exists synchronously
- */
-export function pathExists(filePath: string): boolean {
-  return fs.existsSync(filePath);
-}
-
-/**
  * Read directory contents synchronously
  */
 export function readDirectory(dirPath: string): string[] {
-  return fs.readdirSync(dirPath);
+  const entries: string[] = [];
+  for (const entry of Deno.readDirSync(dirPath)) {
+    entries.push(entry.name);
+  }
+  return entries;
 }
 
 /**
  * Get file/directory stats synchronously
  */
-export function getStats(filePath: string): fs.Stats {
-  return fs.statSync(filePath);
+export function getStats(filePath: string): Deno.FileInfo {
+  return Deno.statSync(filePath);
 }
 
 /**
  * Read file synchronously
  */
 export function readFileSync(filePath: string): string {
-  return fs.readFileSync(filePath, 'utf-8');
+  const decoder = new TextDecoder('utf-8');
+  const data = Deno.readFileSync(filePath);
+  return decoder.decode(data);
 }
 
 /**
@@ -129,7 +141,8 @@ export function readJsonFileSync(filePath: string): unknown {
  * Write file synchronously
  */
 export function writeFileSync(filePath: string, content: string): void {
-  fs.writeFileSync(filePath, content);
+  const encoder = new TextEncoder();
+  Deno.writeFileSync(filePath, encoder.encode(content));
 }
 
 /**
@@ -143,5 +156,5 @@ export function filterDirectory(dirPath: string, extension: string): string[] {
  * Delete file synchronously
  */
 export function unlinkSync(filePath: string): void {
-  fs.unlinkSync(filePath);
+  Deno.removeSync(filePath);
 }

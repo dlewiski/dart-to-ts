@@ -1,6 +1,6 @@
-import * as path from 'path';
-import { readDirectory, getStats } from './utils/file-operations';
-import { type FileCategories } from './types';
+import { join } from '../deps.ts';
+import { readDirectory, getStats } from './utils/file-operations.ts';
+import { type FileCategories } from './types/index.ts';
 
 export function scanDartProject(projectPath: string): FileCategories {
   const categories: FileCategories = {
@@ -18,10 +18,10 @@ export function scanDartProject(projectPath: string): FileCategories {
     const items = readDirectory(dirPath);
 
     for (const item of items) {
-      const fullPath = path.join(dirPath, item);
+      const fullPath = join(dirPath, item);
       const stat = getStats(fullPath);
 
-      if (stat.isDirectory() && !item.startsWith('.') && item !== 'build') {
+      if (stat.isDirectory && !item.startsWith('.') && item !== 'build') {
         scanDirectory(fullPath);
       } else if (item.endsWith('.dart')) {
         categorizeFile(fullPath, categories);
@@ -30,7 +30,7 @@ export function scanDartProject(projectPath: string): FileCategories {
   }
 
   function categorizeFile(filePath: string, cats: FileCategories) {
-    const relativePath = path.relative(projectPath, filePath);
+    const relativePath = filePath.replace(projectPath + '/', '');
 
     // Entry point
     if (relativePath === 'web/main.dart') {

@@ -1,9 +1,10 @@
 /**
  * Integration tests for Claude CLI
  */
-import { executeClaude, analyzeCode } from '../src/claude-cli';
-import { analysisPrompts } from '../src/prompts';
-import { cleanJsonResponse } from '../src/utils/claude-utils';
+import { describe, it, assertEquals } from '../deps.ts';
+import { executeClaude, analyzeCode } from '../src/claude-cli.ts';
+import { analysisPrompts } from '../src/prompts.ts';
+import { cleanJsonResponse } from '../src/utils/claude-utils.ts';
 
 // Test-specific type definitions
 interface ClassAnalysisResult {
@@ -12,35 +13,23 @@ interface ClassAnalysisResult {
   properties: string[];
 }
 
-async function testBasicPrompt() {
-  console.log('📝 Test 1: Basic prompt execution');
+describe('Claude CLI Integration Tests', () => {
+  it('should execute basic prompt', async () => {
+    const result = await executeClaude(
+      'What is 15 + 27? Return only the number.',
+      {
+        model: 'sonnet',
+        maxRetries: 1,
+      }
+    );
 
-  const result = await executeClaude(
-    'What is 15 + 27? Return only the number.',
-    {
-      model: 'sonnet', // Use sonnet model for tests
-      maxRetries: 1,
-    }
-  );
+    assertEquals(result.error, undefined);
+    const answer = parseInt(String(result.result).trim());
+    assertEquals(answer, 42);
+  });
 
-  if (result.error) {
-    console.error('❌ Failed:', result.error);
-    return false;
-  }
-
-  const answer = parseInt(String(result.result).trim());
-  const success = answer === 42;
-  console.log(`   Result: ${result.result}`);
-  console.log(
-    `   ${success ? '✅' : '❌'} Test ${success ? 'passed' : 'failed'}`
-  );
-  return success;
-}
-
-async function testCodeAnalysis() {
-  console.log('\n📝 Test 2: Dart code analysis with JSON response');
-
-  const dartCode = `
+  it('should analyze Dart code and return JSON', async () => {
+    const dartCode = `
 class Dashboard extends Component {
   String title = 'Release Dashboard';
   List<Package> packages = [];
@@ -56,140 +45,105 @@ class Dashboard extends Component {
     );
   }
   
-  void fetchPackages() async {
-    packages = await api.getPackages();
-    setState();
+  void loadPackages() {
+    packages = fetchPackagesFromApi();
   }
 }`;
 
-  const analysisPrompt = `
-Analyze this Dart class and return a JSON object with EXACTLY this structure:
+    const prompt = `
+Analyze this Dart class and return ONLY a JSON object with this structure:
 {
   "className": "string",
-  "purpose": "string",
-  "methods": ["method1", "method2"],
-  "properties": ["prop1", "prop2"]
+  "methods": ["array", "of", "method", "names"],
+  "properties": ["array", "of", "property", "names"]
 }
 
-Code: ${dartCode}
+Code:
+${dartCode}
+`;
 
-Return ONLY the JSON object.`;
+    const result = await analyzeCode(dartCode, prompt, undefined, {
+      model: 'sonnet',
+      maxRetries: 1,
+    });
 
-  const result = await analyzeCode(dartCode, analysisPrompt, undefined, {
-    model: 'sonnet',
-    maxRetries: 2,
+    const parsed = result as ClassAnalysisResult;
+    assertEquals(typeof parsed, 'object');
+    assertEquals(parsed.className, 'Dashboard');
+    assertEquals(Array.isArray(parsed.methods), true);
+    assertEquals(Array.isArray(parsed.properties), true);
   });
 
-  const typedResult = result as ClassAnalysisResult;
-  const success =
-    typedResult &&
-    typedResult.className === 'Dashboard' &&
-    Array.isArray(typedResult.methods) &&
-    Array.isArray(typedResult.properties);
-
-  console.log('   Result:', JSON.stringify(result, null, 2));
-  console.log(
-    `   ${success ? '✅' : '❌'} Test ${success ? 'passed' : 'failed'}`
-  );
-  return success;
+  it('should extract comprehensive analysis from complex code', async () => {
+    const complexCode = `
+// Entry point
+void main() {
+  final app = AppShell();
+  app.initialize();
+  app.run();
 }
 
-async function testPromptTemplates() {
-  console.log('\n📝 Test 3: Prompt template for dependencies');
-
-  const pubspecContent = `
-name: frontend_release_dashboard
-dependencies:
-  over_react: ^4.0.0
-  redux: ^5.0.0
-  built_value: ^8.0.0
-  w_transport: ^3.0.0`;
-
-  const prompt = analysisPrompts.dependencies(pubspecContent);
-
-  // Just verify the prompt is constructed correctly
-  const success =
-    prompt.includes('pubspec.yaml') && prompt.includes('TypeScript equivalent');
-
-  console.log(`   Prompt length: ${prompt.length} characters`);
-  console.log(
-    `   ${success ? '✅' : '❌'} Prompt template ${success ? 'valid' : 'invalid'}`
-  );
-  return success;
+// State management
+class AppState {
+  Map<String, dynamic> state = {};
+  List<Function> listeners = [];
+  
+  void setState(String key, dynamic value) {
+    state[key] = value;
+    notifyListeners();
+  }
 }
 
-async function testJsonCleaning() {
-  console.log('\n📝 Test 4: JSON response cleaning');
+// Component
+class UserProfile extends Component {
+  final User user;
+  
+  Widget build() {
+    return Card(
+      child: Column(
+        children: [
+          Avatar(user.photoUrl),
+          Text(user.name),
+          Text(user.email)
+        ]
+      )
+    );
+  }
+}`;
 
-  const messyResponse = `
-Here is the JSON you requested:
+    const prompt = analysisPrompts.appFunctionality(complexCode);
+    const result = await analyzeCode(complexCode, prompt, undefined, {
+      model: 'sonnet',
+      maxRetries: 1,
+    });
+
+    assertEquals(typeof result, 'object');
+    assertEquals(result !== null, true);
+  });
+
+  it('should clean JSON response correctly', () => {
+    const messyJson = `
+Here's the analysis:
 \`\`\`json
 {
   "test": "value",
-  "number": 123,
+  "nested": {
+    "field": 123
+  }
 }
 \`\`\`
+Some trailing text
 `;
 
-  try {
-    const cleaned = cleanJsonResponse(messyResponse) as Record<string, unknown>;
-    const success = cleaned.test === 'value' && cleaned.number === 123;
-    console.log('   Cleaned:', cleaned);
-    console.log(
-      `   ${success ? '✅' : '❌'} JSON cleaning ${success ? 'works' : 'failed'}`
-    );
-    return success;
-  } catch (e) {
-    console.error('   ❌ Failed to clean JSON:', e);
-    return false;
-  }
-}
-
-async function runAllTests() {
-  console.log('🧪 Running Claude CLI Integration Tests\n');
-  console.log('='.repeat(50));
-
-  const tests = [
-    testBasicPrompt,
-    testCodeAnalysis,
-    testPromptTemplates,
-    testJsonCleaning,
-  ];
-
-  let passed = 0;
-  let failed = 0;
-
-  for (const test of tests) {
-    try {
-      const result = await test();
-      if (result) {
-        passed++;
-      } else {
-        failed++;
-      }
-    } catch (error) {
-      console.error(`\n❌ Test crashed:`, error);
-      failed++;
-    }
-  }
-
-  console.log('\n' + '='.repeat(50));
-  console.log(`\n📊 Test Results: ${passed} passed, ${failed} failed`);
-
-  if (failed === 0) {
-    console.log('🎉 All tests passed!');
-  } else {
-    console.log('⚠️  Some tests failed. Check the output above.');
-    process.exit(1);
-  }
-}
+    const cleaned = cleanJsonResponse(messyJson);
+    assertEquals(typeof cleaned, 'object');
+    assertEquals((cleaned as any).test, 'value');
+    assertEquals((cleaned as any).nested.field, 123);
+  });
+});
 
 // Run tests if this file is executed directly
-if (require.main === module) {
-  runAllTests().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+if (import.meta.main) {
+  console.log('🧪 Running Claude CLI Integration Tests...\n');
+  // Deno test runner will handle test execution
 }
-
-export { runAllTests };

@@ -1,7 +1,7 @@
-import * as path from 'path';
-import { type FileCategories } from './types';
-import { safeReadFile, fileExists } from './utils/file-operations';
-import { type CodeChunk, type CodeFile, FILE_SIZE_LIMITS } from './types';
+import { join, dirname } from '../deps.ts';
+import { type FileCategories } from './types/index.ts';
+import { safeReadFile, fileExists } from './utils/file-operations.ts';
+import { type CodeChunk, type CodeFile, FILE_SIZE_LIMITS } from './types/index.ts';
 
 /**
  * Extract code chunks for analysis with async file operations
@@ -40,7 +40,7 @@ export async function extractCodeForAnalysis(
       categories.state.slice(0, 5).map(async (file) => {
         try {
           const content = await safeReadFile(projectPath, file);
-          totalSize += Buffer.byteLength(content, 'utf-8');
+          totalSize += new TextEncoder().encode(content).length;
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
             console.warn(
@@ -76,7 +76,7 @@ export async function extractCodeForAnalysis(
       categories.components.slice(0, 3).map(async (file) => {
         try {
           const content = await safeReadFile(projectPath, file);
-          totalSize += Buffer.byteLength(content, 'utf-8');
+          totalSize += new TextEncoder().encode(content).length;
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
             console.warn(
@@ -117,7 +117,7 @@ export async function extractCodeForAnalysis(
       categories.services.slice(0, 3).map(async (file) => {
         try {
           const content = await safeReadFile(projectPath, file);
-          totalSize += Buffer.byteLength(content, 'utf-8');
+          totalSize += new TextEncoder().encode(content).length;
 
           if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
             console.warn(
@@ -150,7 +150,7 @@ export async function extractCodeForAnalysis(
   }
 
   // Include pubspec.yaml for dependency understanding
-  const pubspecPath = path.join(projectPath, 'pubspec.yaml');
+  const pubspecPath = join(projectPath, 'pubspec.yaml');
   if (await fileExists(pubspecPath)) {
     try {
       chunks.push({
@@ -159,7 +159,7 @@ export async function extractCodeForAnalysis(
           {
             path: 'pubspec.yaml',
             content: await safeReadFile(
-              path.dirname(pubspecPath),
+              dirname(pubspecPath),
               'pubspec.yaml'
             ),
           },

@@ -2,8 +2,8 @@
  * Central export for all type definitions
  */
 
-export * from './analysis';
-export * from './claude';
+export * from './analysis.ts';
+export * from './claude.ts';
 
 // File-related types
 export interface CodeFile {

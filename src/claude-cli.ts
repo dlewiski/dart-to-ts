@@ -1,14 +1,13 @@
-import { spawn } from 'child_process';
 import {
   type ClaudeOptions,
   type ClaudeResponse,
   type AnalysisSchema,
   TIMEOUTS,
   TimeoutError,
-} from './types';
+} from './types/index.ts';
 
 /**
- * Execute a prompt using Claude CLI with spawn for better security
+ * Execute a prompt using Claude CLI with Deno subprocess
  */
 export async function executeClaude(
   prompt: string,
@@ -35,7 +34,7 @@ export async function executeClaude(
         console.log(`[Claude CLI] Attempt ${attempt}/${maxRetries}...`);
       }
 
-      const result = await executeClaudeSpawn(prompt, args, verbose, timeout);
+      const result = await executeClaudeSubprocess(prompt, args, verbose, timeout);
 
       if (outputFormat === 'json') {
         try {
@@ -76,129 +75,73 @@ export async function executeClaude(
 }
 
 /**
- * Execute Claude CLI using spawn for better security and control
+ * Execute Claude CLI using Deno subprocess
  */
-function executeClaudeSpawn(
+async function executeClaudeSubprocess(
   prompt: string,
   args: string[],
   verbose: boolean,
   timeout: number = TIMEOUTS.CLAUDE_CLI
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('claude', args, {
-      env: process.env,
-      shell: false, // Prevent shell injection
-      stdio: ['pipe', 'pipe', 'pipe'], // Explicit stdio configuration
-    });
+  const command = new Deno.Command('claude', {
+    args,
+    stdin: 'piped',
+    stdout: 'piped',
+    stderr: 'piped',
+  });
 
-    let stdout = '';
-    let stderr = '';
-    const maxOutputSize = 10 * 1024 * 1024; // 10MB limit
-    let outputSize = 0;
-    let timeoutHandle: NodeJS.Timeout | null = null;
-    let isCleanedUp = false;
+  const process = command.spawn();
 
-    // Cleanup function to ensure proper resource cleanup
-    const cleanup = () => {
-      if (isCleanedUp) {
-        return;
+  // Write prompt to stdin
+  const writer = process.stdin.getWriter();
+  const encoder = new TextEncoder();
+  await writer.write(encoder.encode(prompt));
+  await writer.close();
+
+  // Set up timeout
+  let timeoutId: number | null = null;
+  if (timeout > 0) {
+    timeoutId = setTimeout(() => {
+      try {
+        process.kill();
+      } catch (e) {
+        if (verbose) {
+          console.error('[Claude CLI] Error killing process:', e);
+        }
       }
-      isCleanedUp = true;
+    }, timeout);
+  }
 
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-        timeoutHandle = null;
-      }
+  try {
+    const { code, stdout, stderr } = await process.output();
 
-      // Remove all listeners to prevent memory leaks
-      child.stdin.removeAllListeners();
-      child.stdout.removeAllListeners();
-      child.stderr.removeAllListeners();
-      child.removeAllListeners();
-    };
-
-    // Handle process termination signals
-    const handleSignal = (signal: NodeJS.Signals) => {
-      if (verbose) {
-        console.log(
-          `[Claude CLI] Received ${signal}, terminating child process...`
-        );
-      }
-      cleanup();
-      child.kill(signal);
-      reject(new Error(`Process terminated by ${signal}`));
-    };
-
-    process.once('SIGINT', () => handleSignal('SIGINT'));
-    process.once('SIGTERM', () => handleSignal('SIGTERM'));
-
-    // Set up timeout
-    if (timeout > 0) {
-      timeoutHandle = setTimeout(() => {
-        child.kill('SIGTERM');
-        reject(new TimeoutError('Claude CLI execution', timeout));
-      }, timeout);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
 
-    // Handle stdin errors
-    child.stdin.on('error', (error) => {
-      console.error('[Claude CLI] stdin error:', error);
-      reject(error);
-    });
+    const decoder = new TextDecoder();
+    const stdoutStr = decoder.decode(stdout);
+    const stderrStr = decoder.decode(stderr);
 
-    // Write prompt to stdin with proper encoding
-    child.stdin.write(prompt, 'utf-8', (err) => {
-      if (err) {
-        console.error('[Claude CLI] Failed to write to stdin:', err);
-        reject(err);
-      } else {
-        child.stdin.end();
-      }
-    });
+    if (verbose && stderrStr) {
+      console.error('[Claude CLI stderr]:', stderrStr);
+    }
 
-    child.stdout.on('data', (data) => {
-      outputSize += data.length;
-      if (outputSize > maxOutputSize) {
-        child.kill();
-        reject(
-          new Error(`Output exceeded maximum size of ${maxOutputSize} bytes`)
-        );
-        return;
-      }
-      stdout += data.toString();
-    });
+    if (code !== 0) {
+      throw new Error(`Claude CLI exited with code ${code}: ${stderrStr}`);
+    }
 
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-      if (verbose) {
-        console.error('[Claude CLI stderr]:', data.toString());
-      }
-    });
-
-    child.on('error', (error) => {
-      cleanup();
-
-      // Remove signal handlers
-      process.removeListener('SIGINT', handleSignal);
-      process.removeListener('SIGTERM', handleSignal);
-
-      reject(error);
-    });
-
-    child.on('close', (code) => {
-      cleanup();
-
-      // Remove signal handlers
-      process.removeListener('SIGINT', handleSignal);
-      process.removeListener('SIGTERM', handleSignal);
-
-      if (code !== 0) {
-        reject(new Error(`Claude CLI exited with code ${code}: ${stderr}`));
-      } else {
-        resolve(stdout);
-      }
-    });
-  });
+    return stdoutStr;
+  } catch (error) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
+    if (error instanceof Error && error.message.includes('timed out')) {
+      throw new TimeoutError('Claude CLI execution', timeout);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -248,7 +191,7 @@ function extractAndValidateJson(text: string): unknown {
     text.match(/```\n?([\s\S]*?)\n?```/) ||
     text.match(/({[\s\S]*})/);
 
-  if (jsonMatch) {
+  if (jsonMatch && jsonMatch[1]) {
     try {
       const parsed = JSON.parse(jsonMatch[1]);
       // Basic validation - ensure it's an object
@@ -271,8 +214,9 @@ function extractAndValidateJson(text: string): unknown {
     console.warn(
       '[Claude CLI] Could not parse JSON from response, returning raw text'
     );
-    return text;
   }
+  
+  return text;
 }
 
 /**

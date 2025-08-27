@@ -3,7 +3,7 @@
  * Each prompt is designed to return structured JSON data
  */
 
-import { type SchemaDefinition } from './types';
+import { type SchemaDefinition } from './types/index.ts';
 
 export const analysisPrompts = {
   /**

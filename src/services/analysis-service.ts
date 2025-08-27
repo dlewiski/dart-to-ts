@@ -1,11 +1,11 @@
-import * as path from 'path';
-import { scanDartProject } from '../scanner';
-import { extractCodeForAnalysis } from '../extractor';
-import { analyzeFunctionality, comprehensiveAnalysis } from '../analyzer';
+import { join } from '../../deps.ts';
+import { scanDartProject } from '../scanner.ts';
+import { extractCodeForAnalysis } from '../extractor.ts';
+import { analyzeFunctionality, comprehensiveAnalysis } from '../analyzer.ts';
 import {
   safeWriteJsonFile,
   ensureDirectoryExists,
-} from '../utils/file-operations';
+} from '../utils/file-operations.ts';
 import {
   type CLIOptions,
   type AnalysisOptions,
@@ -13,7 +13,7 @@ import {
   type Workflow,
   type FileCategories,
   type CodeChunk,
-} from '../types';
+} from '../types/index.ts';
 
 export interface AnalysisResult {
   analysis: FunctionalAnalysis;
@@ -67,16 +67,16 @@ export class AnalysisService {
   ): Promise<AnalysisReport> {
     console.log('\n📊 Generating analysis reports...\n');
 
-    const baseDir = outputDir || path.join(__dirname, '..', '..', 'analysis');
-    const analysisDir = path.resolve(baseDir);
-    const rawDir = path.join(analysisDir, 'raw');
-    const functionalDir = path.join(analysisDir, 'functional');
+    const baseDir = outputDir || join(Deno.cwd(), 'analysis');
+    const analysisDir = baseDir;
+    const rawDir = join(analysisDir, 'raw');
+    const functionalDir = join(analysisDir, 'functional');
 
     // Ensure directories exist
     [analysisDir, rawDir, functionalDir].forEach(ensureDirectoryExists);
 
     // Save file categories
-    const categoriesPath = path.join(rawDir, 'file-categories.json');
+    const categoriesPath = join(rawDir, 'file-categories.json');
     this.saveWithErrorHandling(
       () => safeWriteJsonFile(categoriesPath, result.categories),
       `File categories saved to: ${categoriesPath}`,
@@ -84,7 +84,7 @@ export class AnalysisService {
     );
 
     // Save functional analysis
-    const analysisPath = path.join(functionalDir, 'analysis.json');
+    const analysisPath = join(functionalDir, 'analysis.json');
     this.saveWithErrorHandling(
       () => safeWriteJsonFile(analysisPath, result.analysis),
       `Functional analysis saved to: ${analysisPath}`,
@@ -93,7 +93,7 @@ export class AnalysisService {
 
     // Generate and save human-readable report
     const report = this.generateReadableReport(result.analysis);
-    const reportPath = path.join(analysisDir, 'report.md');
+    const reportPath = join(analysisDir, 'report.md');
     this.saveWithErrorHandling(
       () => safeWriteJsonFile(reportPath, report),
       `Readable report saved to: ${reportPath}\n`,
@@ -119,8 +119,10 @@ export class AnalysisService {
       model: options.model || 'sonnet',
       verbose: options.verbose || false,
       useCache: !options.noCache,
-      timeout: options.timeout,
     };
+    if (options.timeout !== undefined) {
+      analysisOptions.timeout = options.timeout;
+    }
 
     if (options.comprehensive) {
       return comprehensiveAnalysis(chunks, analysisOptions);

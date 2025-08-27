@@ -1,12 +1,12 @@
-import { analyzeCode, executeClaude } from './claude-cli';
-import { analysisPrompts } from './prompts';
+import { analyzeCode, executeClaude } from './claude-cli.ts';
+import { analysisPrompts } from './prompts.ts';
 import {
   ResponseCache,
   ProgressIndicator,
   cleanJsonResponse,
   formatUsageInfo,
   extractUsageInfo,
-} from './utils/claude-utils';
+} from './utils/claude-utils.ts';
 import {
   type CodeChunk,
   type FunctionalAnalysis,
@@ -14,7 +14,7 @@ import {
   type ChunkAnalysisResult,
   type ComprehensiveAnalysisResult,
   type ClaudeOptions,
-} from './types';
+} from './types/index.ts';
 
 // Initialize cache
 const cache = new ResponseCache('.claude-cache', 120); // 2 hour cache
@@ -42,7 +42,7 @@ export async function analyzeFunctionality(
 
   // Process each chunk type
   for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+    const chunk = chunks[i]!;
     progress.update(i + 1, `Analyzing ${chunk.category}...`);
 
     try {
@@ -51,22 +51,25 @@ export async function analyzeFunctionality(
       // Check cache first
       const cacheKey = `${chunk.category}_${model}`;
       if (useCache) {
-        result = cache.get(chunk.files[0]?.content || '', {
+        result = await cache.get(chunk.files[0]?.content || '', {
           category: cacheKey,
         });
       }
 
       if (!result) {
         // Analyze based on category
-        result = await analyzeChunkByCategory(chunk, {
+        const options: ClaudeOptions = {
           model,
           verbose,
-          timeout,
-        });
+        };
+        if (timeout !== undefined) {
+          options.timeout = timeout;
+        }
+        result = await analyzeChunkByCategory(chunk, options);
 
         // Cache the result
         if (useCache && result) {
-          cache.set(chunk.files[0]?.content || '', result, {
+          await cache.set(chunk.files[0]?.content || '', result, {
             category: cacheKey,
           });
         }
@@ -325,12 +328,15 @@ export async function comprehensiveAnalysis(
   const prompt = analysisPrompts.comprehensiveAnalysis(chunkData);
 
   try {
-    const result = await executeClaude(prompt, {
+    const options: ClaudeOptions = {
       model,
       verbose,
       outputFormat: 'json',
-      timeout,
-    });
+    };
+    if (timeout !== undefined) {
+      options.timeout = timeout;
+    }
+    const result = await executeClaude(prompt, options);
 
     if (result.error) {
       throw new Error(result.error);
