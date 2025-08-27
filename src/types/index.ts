@@ -18,11 +18,12 @@ export interface CodeChunk {
 }
 
 export interface FileCategories {
-  entry?: string;
+  entry: string | null;
   components: string[];
   state: string[];
   services: string[];
   utils: string[];
+  models: string[];
   tests: string[];
   other: string[];
 }

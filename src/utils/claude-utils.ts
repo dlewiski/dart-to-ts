@@ -1,5 +1,12 @@
-import * as fs from 'fs';
 import * as path from 'path';
+import {
+  pathExists,
+  ensureDirectoryExists,
+  readFileSync,
+  writeFileSync,
+  filterDirectory,
+  unlinkSync,
+} from './file-operations';
 import * as crypto from 'crypto';
 import {
   type CacheOptions,
@@ -20,8 +27,8 @@ export class ResponseCache {
     this.ttl = ttlMinutes * 60 * 1000;
 
     // Ensure cache directory exists
-    if (!fs.existsSync(this.cacheDir)) {
-      fs.mkdirSync(this.cacheDir, { recursive: true });
+    if (!pathExists(this.cacheDir)) {
+      ensureDirectoryExists(this.cacheDir);
     }
   }
 
@@ -40,20 +47,18 @@ export class ResponseCache {
     const key = this.getCacheKey(prompt, options);
     const cachePath = path.join(this.cacheDir, `${key}.json`);
 
-    if (!fs.existsSync(cachePath)) {
+    if (!pathExists(cachePath)) {
       return null;
     }
 
     try {
-      const cached: CachedResponse = JSON.parse(
-        fs.readFileSync(cachePath, 'utf-8')
-      );
+      const cached: CachedResponse = JSON.parse(readFileSync(cachePath));
       const age = Date.now() - cached.timestamp;
 
       if (age > this.ttl) {
         // Cache expired
         try {
-          fs.unlinkSync(cachePath);
+          unlinkSync(cachePath);
         } catch (unlinkError) {
           console.warn(
             '[Cache] Failed to remove expired cache file:',
@@ -84,7 +89,7 @@ export class ResponseCache {
     };
 
     try {
-      fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+      writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
     } catch (error) {
       console.error('[Cache] Failed to write cache file:', error);
       // Don't throw - caching is not critical to operation
@@ -95,10 +100,10 @@ export class ResponseCache {
    * Clear all cache
    */
   clear(): void {
-    const files = fs.readdirSync(this.cacheDir);
+    const files = filterDirectory(this.cacheDir, '.json');
     for (const file of files) {
       if (file.endsWith('.json')) {
-        fs.unlinkSync(path.join(this.cacheDir, file));
+        unlinkSync(path.join(this.cacheDir, file));
       }
     }
   }

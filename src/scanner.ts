@@ -1,14 +1,6 @@
-import * as fs from 'fs';
 import * as path from 'path';
-
-export interface FileCategories {
-  components: string[];
-  state: string[];
-  services: string[];
-  utils: string[];
-  entry: string | null;
-  models: string[];
-}
+import { readDirectory, getStats } from './utils/file-operations';
+import { type FileCategories } from './types';
 
 export function scanDartProject(projectPath: string): FileCategories {
   const categories: FileCategories = {
@@ -18,14 +10,16 @@ export function scanDartProject(projectPath: string): FileCategories {
     utils: [],
     entry: null,
     models: [],
+    tests: [],
+    other: [],
   };
 
   function scanDirectory(dirPath: string) {
-    const items = fs.readdirSync(dirPath);
+    const items = readDirectory(dirPath);
 
     for (const item of items) {
       const fullPath = path.join(dirPath, item);
-      const stat = fs.statSync(fullPath);
+      const stat = getStats(fullPath);
 
       if (stat.isDirectory() && !item.startsWith('.') && item !== 'build') {
         scanDirectory(fullPath);
