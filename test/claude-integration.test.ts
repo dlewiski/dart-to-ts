@@ -1,9 +1,9 @@
 /**
  * Integration tests for Claude CLI
  */
-import { executeClaude, analyzeCode } from '../src/claude-cli.js';
-import { analysisPrompts } from '../src/prompts.js';
-import { cleanJsonResponse } from '../src/utils/claude-utils.js';
+import { executeClaude, analyzeCode } from '../src/claude-cli';
+import { analysisPrompts } from '../src/prompts';
+import { cleanJsonResponse } from '../src/utils/claude-utils';
 
 // Test-specific type definitions
 interface ClassAnalysisResult {
@@ -185,8 +185,11 @@ async function runAllTests() {
 }
 
 // Run tests if this file is executed directly
-// In ES modules, we check if the module was run directly
-runAllTests().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  runAllTests().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}
+
+export { runAllTests };

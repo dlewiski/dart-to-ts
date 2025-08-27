@@ -33,6 +33,7 @@ export interface CLIOptions {
   model?: 'sonnet' | 'opus';
   verbose?: boolean;
   noCache?: boolean;
+  timeout?: number;
 }
 
 // Security constraints
@@ -44,9 +45,10 @@ export const FILE_SIZE_LIMITS = {
 
 // Timing constraints
 export const TIMEOUTS = {
-  CLAUDE_CLI: 30000, // 30 seconds
+  CLAUDE_CLI: 60000, // 60 seconds per Claude API call
   FILE_READ: 5000, // 5 seconds
   CACHE_TTL: 120 * 60 * 1000, // 2 hours
+  ANALYSIS_DEFAULT: 600000, // 10 minutes default for full analysis
 } as const;
 
 // Error types

@@ -116,4 +116,5 @@ export interface AnalysisOptions {
   useCache?: boolean;
   verbose?: boolean;
   model?: 'sonnet' | 'opus';
+  timeout?: number;
 }

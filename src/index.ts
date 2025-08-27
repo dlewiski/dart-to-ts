@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { Command } from 'commander';
 import { scanDartProject } from './scanner';
 import { extractCodeForAnalysis } from './extractor';
 import { analyzeFunctionality, comprehensiveAnalysis } from './analyzer';
@@ -36,6 +37,7 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
     model: options.model || 'sonnet',
     verbose: options.verbose || false,
     useCache: !options.noCache,
+    timeout: options.timeout,
   };
 
   let analysis;
@@ -164,48 +166,46 @@ Based on this analysis, the TypeScript conversion should:
 
 // Run analysis if called directly
 if (require.main === module) {
-  const projectPath =
-    process.argv[2] || path.join(__dirname, '..', 'frontend_release_dashboard');
+  const program = new Command();
 
-  // Parse command line options
-  const options: CLIOptions = {
-    comprehensive: process.argv.includes('--comprehensive'),
-    verbose: process.argv.includes('--verbose'),
-    noCache: process.argv.includes('--no-cache'),
-    model: 'sonnet', // default
-  };
+  program
+    .name('dart-to-ts-analyzer')
+    .description('Analyze Dart Flutter apps for TypeScript conversion')
+    .version('1.0.0')
+    .argument('[project-path]', 'Path to Dart project directory', path.join(__dirname, '..', '..', 'frontend_release_dashboard'))
+    .option('-c, --comprehensive', 'Use comprehensive analysis (slower but more thorough)', false)
+    .option('-m, --model <model>', 'Choose Claude model: sonnet (default) or opus', 'sonnet')
+    .option('-v, --verbose', 'Show detailed progress and API usage', false)
+    .option('--no-cache', 'Don\'t use cached responses', false)
+    .option('-t, --timeout <seconds>', 'Timeout for analysis in seconds (default: 600)', '600')
+    .action((projectPath: string, options: any) => {
+      const cliOptions: CLIOptions = {
+        comprehensive: options.comprehensive,
+        verbose: options.verbose,
+        noCache: !options.cache,
+        model: options.model as 'sonnet' | 'opus',
+        timeout: parseInt(options.timeout) * 1000, // Convert seconds to milliseconds
+      };
 
-  // Check for model option
-  const modelIndex = process.argv.indexOf('--model');
-  if (modelIndex !== -1 && process.argv[modelIndex + 1]) {
-    const model = process.argv[modelIndex + 1] as 'sonnet' | 'opus';
-    if (['sonnet', 'opus'].includes(model)) {
-      options.model = model;
-    }
-  }
+      // Validate model option
+      if (!['sonnet', 'opus'].includes(cliOptions.model!)) {
+        console.error(`Error: Invalid model "${cliOptions.model}". Use 'sonnet' or 'opus'.`);
+        process.exit(1);
+      }
 
-  // Show usage if help requested
-  if (process.argv.includes('--help')) {
-    console.log(`
-Usage: pnpm analyze [project-path] [options]
+      // Validate project path exists
+      if (!fs.existsSync(projectPath)) {
+        console.error(`Error: Project path "${projectPath}" does not exist.`);
+        process.exit(1);
+      }
 
-Options:
-  --comprehensive    Use comprehensive analysis (slower but more thorough)
-  --model <model>    Choose Claude model: sonnet (default), opus, or haiku
-  --verbose          Show detailed progress and API usage
-  --no-cache         Don't use cached responses
-  --help             Show this help message
+      analyzeDartApp(projectPath, cliOptions).catch((error) => {
+        console.error('Fatal error during analysis:', error);
+        process.exit(1);
+      });
+    });
 
-Examples:
-  pnpm analyze
-  pnpm analyze ./my-dart-app
-  pnpm analyze --comprehensive --model opus
-  pnpm analyze --verbose --no-cache
-`);
-    process.exit(0);
-  }
-
-  analyzeDartApp(projectPath, options).catch(console.error);
+  program.parse(process.argv);
 }
 
 export { analyzeDartApp };
