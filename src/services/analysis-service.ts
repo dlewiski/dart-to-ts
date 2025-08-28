@@ -124,18 +124,22 @@ export class AnalysisService {
 
     // Use parallel processing if enabled
     if (options.parallel) {
-      const { ParallelAnalyzer } = await import('../core/parallel/ParallelAnalyzer');
+      const { ParallelAnalyzer } = await import(
+        '../core/parallel/ParallelAnalyzer'
+      );
       const parallelAnalyzer = new ParallelAnalyzer({
         ...analysisOptions,
         maxWorkers: options.workers || 4,
         useWorkers: false, // Use simulated parallel for now
       });
-      
-      console.log(`🚀 Using parallel processing with ${options.workers || 4} workers\n`);
-      
+
+      console.log(
+        `🚀 Using parallel processing with ${options.workers || 4} workers\n`
+      );
+
       const result = await parallelAnalyzer.analyzeFunctionality(chunks);
       await parallelAnalyzer.shutdown();
-      
+
       return result;
     }
 

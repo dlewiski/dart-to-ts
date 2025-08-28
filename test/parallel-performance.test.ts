@@ -5,17 +5,18 @@
 
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer';
 import { analyzeFunctionality } from '../src/analyzer';
-import { CodeChunk } from '../src/types';
+import { type CodeChunk } from '../src/types';
 
 // Create realistic test data
 function createTestChunks(count: number): CodeChunk[] {
   const categories = ['components', 'services', 'state', 'utils'];
-  
+
   return Array.from({ length: count }, (_, i) => ({
     category: categories[i % categories.length],
-    files: [{
-      path: `lib/src/${categories[i % categories.length]}/file_${i}.dart`,
-      content: `
+    files: [
+      {
+        path: `lib/src/${categories[i % categories.length]}/file_${i}.dart`,
+        content: `
         import 'package:flutter/material.dart';
         
         class ${categories[i % categories.length]}Class${i} extends StatelessWidget {
@@ -49,15 +50,16 @@ function createTestChunks(count: number): CodeChunk[] {
             return input.toUpperCase();
           }
         }
-      `.trim()
-    }],
-    context: `Performance test chunk ${i}`
+      `.trim(),
+      },
+    ],
+    context: `Performance test chunk ${i}`,
   }));
 }
 
 async function runPerformanceTests() {
   console.log('⚡ Parallel Processing Performance Tests\n');
-  console.log('=' .repeat(50) + '\n');
+  console.log('='.repeat(50) + '\n');
 
   // Test configurations
   const testConfigs = [
@@ -71,54 +73,56 @@ async function runPerformanceTests() {
   for (const config of testConfigs) {
     console.log(`\n📊 Testing: ${config.name}`);
     console.log('-'.repeat(40));
-    
+
     const chunks = createTestChunks(config.chunks);
-    
+
     // Test 1: Sequential processing (baseline)
     console.log('Running sequential analysis...');
     const sequentialStart = Date.now();
     const sequentialMemStart = process.memoryUsage().heapUsed;
-    
+
     try {
       await analyzeFunctionality(chunks, {
         useCache: false,
         timeout: 30000,
-        verbose: false
+        verbose: false,
       });
-    } catch (error) {
+    } catch (_error) {
       console.log('  ⚠️  Sequential analysis failed (expected in test env)');
     }
-    
+
     const sequentialTime = Date.now() - sequentialStart;
-    const sequentialMemUsed = (process.memoryUsage().heapUsed - sequentialMemStart) / 1024 / 1024;
-    
+    const sequentialMemUsed =
+      (process.memoryUsage().heapUsed - sequentialMemStart) / 1024 / 1024;
+
     // Test 2: Parallel processing
     console.log(`Running parallel analysis (${config.workers} workers)...`);
     const parallelStart = Date.now();
     const parallelMemStart = process.memoryUsage().heapUsed;
-    
+
     const parallelAnalyzer = new ParallelAnalyzer({
       maxWorkers: config.workers,
       useCache: false,
       timeout: 30000,
-      verbose: false
+      verbose: false,
     });
-    
+
     try {
       await parallelAnalyzer.analyzeFunctionality(chunks);
-    } catch (error) {
+    } catch (_error) {
       console.log('  ⚠️  Parallel analysis failed (expected in test env)');
     }
-    
+
     const parallelTime = Date.now() - parallelStart;
-    const parallelMemUsed = (process.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
-    
+    const parallelMemUsed =
+      (process.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
+
     await parallelAnalyzer.shutdown();
-    
+
     // Calculate improvements
     const speedup = sequentialTime / parallelTime;
     const memoryRatio = parallelMemUsed / sequentialMemUsed;
-    
+
     // Store results
     const result = {
       config: config.name,
@@ -129,40 +133,49 @@ async function runPerformanceTests() {
       speedup: speedup.toFixed(2),
       sequentialMem: sequentialMemUsed.toFixed(1),
       parallelMem: parallelMemUsed.toFixed(1),
-      memoryRatio: memoryRatio.toFixed(2)
+      memoryRatio: memoryRatio.toFixed(2),
     };
-    
+
     results.push(result);
-    
+
     // Display results
     console.log('\nResults:');
-    console.log(`  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`);
-    console.log(`  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`);
+    console.log(
+      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`
+    );
+    console.log(
+      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`
+    );
     console.log(`  Speedup:    ${speedup.toFixed(2)}x`);
     console.log(`  Memory:     ${memoryRatio.toFixed(2)}x`);
-    
+
     if (speedup > 1) {
-      console.log(`  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`);
+      console.log(
+        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`
+      );
     } else {
       console.log(`  ⚠️  No speedup achieved`);
     }
   }
 
   // Summary table
-  console.log('\n' + '=' .repeat(50));
+  console.log('\n' + '='.repeat(50));
   console.log('\n📈 Performance Summary:\n');
-  console.table(results.map(r => ({
-    Test: r.config,
-    'Sequential (ms)': r.sequentialTime,
-    'Parallel (ms)': r.parallelTime,
-    'Speedup': `${r.speedup}x`,
-    'Memory Ratio': `${r.memoryRatio}x`
-  })));
+  console.table(
+    results.map((r) => ({
+      Test: r.config,
+      'Sequential (ms)': r.sequentialTime,
+      'Parallel (ms)': r.parallelTime,
+      Speedup: `${r.speedup}x`,
+      'Memory Ratio': `${r.memoryRatio}x`,
+    }))
+  );
 
   // Overall assessment
-  const avgSpeedup = results.reduce((sum, r) => sum + parseFloat(r.speedup), 0) / results.length;
+  const avgSpeedup =
+    results.reduce((sum, r) => sum + parseFloat(r.speedup), 0) / results.length;
   console.log('\n🎯 Overall Performance:');
-  
+
   if (avgSpeedup > 1.5) {
     console.log(`  ✅ Excellent! Average speedup: ${avgSpeedup.toFixed(2)}x`);
   } else if (avgSpeedup > 1.2) {
@@ -173,12 +186,12 @@ async function runPerformanceTests() {
     console.log(`  ❌ No improvement: ${avgSpeedup.toFixed(2)}x`);
   }
 
-  console.log('\n' + '=' .repeat(50) + '\n');
+  console.log('\n' + '='.repeat(50) + '\n');
 }
 
 // Run if executed directly
 if (require.main === module) {
-  runPerformanceTests().catch(error => {
+  runPerformanceTests().catch((error) => {
     console.error('Fatal error:', error);
     process.exit(1);
   });

@@ -1,6 +1,6 @@
 // Simple test file for parallel processing functionality
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer';
-import { CodeChunk } from '../src/types';
+import { type CodeChunk } from '../src/types';
 
 async function runTests() {
   console.log('🧪 Testing Parallel Processing Features\n');
@@ -54,7 +54,9 @@ async function runTests() {
 
     analyzer.on('progress', (event) => {
       progressEmitted = true;
-      console.log(`  📊 Progress: ${event.processed}/${event.total} (${event.percentage.toFixed(0)}%)`);
+      console.log(
+        `  📊 Progress: ${event.processed}/${event.total} (${event.percentage.toFixed(0)}%)`
+      );
     });
 
     const chunks: CodeChunk[] = [
@@ -126,7 +128,12 @@ async function runTests() {
     const chunks: CodeChunk[] = [
       {
         category: 'components',
-        files: [{ path: 'memory.dart', content: 'class MemoryTest { /* ' + 'a'.repeat(1000) + ' */ }' }],
+        files: [
+          {
+            path: 'memory.dart',
+            content: 'class MemoryTest { /* ' + 'a'.repeat(1000) + ' */ }',
+          },
+        ],
         context: 'Memory test',
       },
     ];
@@ -137,7 +144,9 @@ async function runTests() {
     const memUsed = (memAfter - memBefore) / 1024 / 1024;
 
     if (results && memUsed < 100) {
-      console.log(`  ✅ Memory usage kept under limit (${memUsed.toFixed(1)}MB)`);
+      console.log(
+        `  ✅ Memory usage kept under limit (${memUsed.toFixed(1)}MB)`
+      );
       passed++;
     } else {
       console.log(`  ❌ Memory limit exceeded (${memUsed.toFixed(1)}MB)`);
@@ -153,7 +162,7 @@ async function runTests() {
   // Summary
   console.log('\n' + '='.repeat(50));
   console.log(`\n📊 Test Results: ${passed} passed, ${failed} failed\n`);
-  
+
   process.exit(failed > 0 ? 1 : 0);
 }
 
