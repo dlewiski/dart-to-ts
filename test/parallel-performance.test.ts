@@ -3,26 +3,31 @@
  * Measures actual time improvements and resource usage
  */
 
-import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer';
-import { analyzeFunctionality } from '../src/analyzer';
-import { type CodeChunk } from '../src/types';
+import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
+import { analyzeFunctionality } from '../src/analyzer.ts';
+import { type CodeChunk } from '../src/types/index.ts';
+import process from 'node:process';
 
 // Create realistic test data
 function createTestChunks(count: number): CodeChunk[] {
   const categories = ['components', 'services', 'state', 'utils'];
 
   return Array.from({ length: count }, (_, i) => ({
-    category: categories[i % categories.length],
+    category: categories[i % categories.length] as string,
     files: [
       {
         path: `lib/src/${categories[i % categories.length]}/file_${i}.dart`,
         content: `
         import 'package:flutter/material.dart';
         
-        class ${categories[i % categories.length]}Class${i} extends StatelessWidget {
+        class ${
+          categories[i % categories.length]
+        }Class${i} extends StatelessWidget {
           final String data;
           
-          const ${categories[i % categories.length]}Class${i}({required this.data});
+          const ${
+          categories[i % categories.length]
+        }Class${i}({required this.data});
           
           @override
           Widget build(BuildContext context) {
@@ -68,7 +73,17 @@ async function runPerformanceTests() {
     { chunks: 10, workers: 4, name: 'Large (10 chunks)' },
   ];
 
-  const results: any[] = [];
+  const results: Array<{
+    config: string;
+    chunks: number;
+    workers: number;
+    sequentialTime: number;
+    parallelTime: number;
+    speedup: string;
+    sequentialMem: string;
+    parallelMem: string;
+    memoryRatio: string;
+  }> = [];
 
   for (const config of testConfigs) {
     console.log(`\n📊 Testing: ${config.name}`);
@@ -102,7 +117,6 @@ async function runPerformanceTests() {
 
     const parallelAnalyzer = new ParallelAnalyzer({
       maxWorkers: config.workers,
-      useCache: false,
       timeout: 30000,
       verbose: false,
     });
@@ -141,17 +155,17 @@ async function runPerformanceTests() {
     // Display results
     console.log('\nResults:');
     console.log(
-      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`
+      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`,
     );
     console.log(
-      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`
+      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`,
     );
     console.log(`  Speedup:    ${speedup.toFixed(2)}x`);
     console.log(`  Memory:     ${memoryRatio.toFixed(2)}x`);
 
     if (speedup > 1) {
       console.log(
-        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`
+        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`,
       );
     } else {
       console.log(`  ⚠️  No speedup achieved`);
@@ -168,7 +182,7 @@ async function runPerformanceTests() {
       'Parallel (ms)': r.parallelTime,
       Speedup: `${r.speedup}x`,
       'Memory Ratio': `${r.memoryRatio}x`,
-    }))
+    })),
   );
 
   // Overall assessment
@@ -190,10 +204,10 @@ async function runPerformanceTests() {
 }
 
 // Run if executed directly
-if (require.main === module) {
+if (import.meta.main) {
   runPerformanceTests().catch((error) => {
     console.error('Fatal error:', error);
-    process.exit(1);
+    Deno.exit(1);
   });
 }
 

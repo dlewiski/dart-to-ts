@@ -6,6 +6,7 @@ import path from 'path';
 import { CLIOptions, FunctionalAnalysis } from './types/index.ts';
 import { AnalysisService } from './services/analysis-service.ts';
 import { pathExists } from './utils/path-exists.ts';
+import process from 'node:process';
 
 async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   const analysisService = new AnalysisService(projectPath);
@@ -35,34 +36,34 @@ if (require.main === module) {
     .argument(
       '[project-path]',
       'Path to Dart project directory',
-      path.join(__dirname, '..', '..', 'frontend_release_dashboard')
+      path.join(__dirname, '..', '..', 'frontend_release_dashboard'),
     )
     .option(
       '-c, --comprehensive',
       'Use comprehensive analysis (slower but more thorough)',
-      false
+      false,
     )
     .option(
       '-m, --model <model>',
       'Choose Claude model: sonnet (default) or opus',
-      'sonnet'
+      'sonnet',
     )
     .option('-v, --verbose', 'Show detailed progress and API usage', false)
     .option('--no-cache', "Don't use cached responses", false)
     .option(
       '-t, --timeout <seconds>',
       'Timeout for analysis in seconds (default: 600)',
-      '600'
+      '600',
     )
     .option(
       '-p, --parallel',
       'Enable parallel processing for faster analysis',
-      false
+      false,
     )
     .option(
       '-w, --workers <count>',
       'Number of parallel workers (default: 4)',
-      '4'
+      '4',
     )
     .action((projectPath: string, options: any) => {
       const cliOptions: CLIOptions = {
@@ -78,7 +79,7 @@ if (require.main === module) {
       // Validate model option
       if (!['sonnet', 'opus'].includes(cliOptions.model!)) {
         console.error(
-          `Error: Invalid model "${cliOptions.model}". Use 'sonnet' or 'opus'.`
+          `Error: Invalid model "${cliOptions.model}". Use 'sonnet' or 'opus'.`,
         );
         process.exit(1);
       }

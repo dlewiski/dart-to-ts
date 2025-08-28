@@ -3,7 +3,7 @@
  * Uses mocks to test core functionality quickly
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 // Simple mock analyzer for testing
 class MockParallelAnalyzer extends EventEmitter {
@@ -14,14 +14,28 @@ class MockParallelAnalyzer extends EventEmitter {
   private simulateErrors: boolean;
   private simulateDelay: number;
 
-  constructor(options: any = {}) {
+  constructor(options: {
+    maxWorkers?: number;
+    simulateErrors?: boolean;
+    simulateDelay?: number;
+  } = {}) {
     super();
     this.maxWorkers = options.maxWorkers || 4;
     this.simulateErrors = options.simulateErrors || false;
     this.simulateDelay = options.simulateDelay || 10; // ms
   }
 
-  async analyzeFunctionality(chunks: any[]): Promise<any> {
+  async analyzeFunctionality(chunks: Array<{
+    category: string;
+    files: Array<{ content: string }>;
+  }>): Promise<{
+    appPurpose: string;
+    coreFeatures: string[];
+    stateManagement: { pattern: string };
+    dataFlow: { sources: unknown[]; transformations: unknown[]; destinations: unknown[] };
+    businessLogic: { rules: unknown[]; validations: unknown[]; calculations: unknown[] };
+    dependencies: { dart: unknown[]; tsEquivalents: Record<string, unknown> };
+  }> {
     this.totalChunks = chunks.length;
     this.processedChunks = 0;
 
@@ -53,7 +67,7 @@ class MockParallelAnalyzer extends EventEmitter {
           this.processedChunks++;
           this.activeWorkers--;
           this.emitProgress();
-        })
+        }),
       );
     }
 
@@ -68,10 +82,9 @@ class MockParallelAnalyzer extends EventEmitter {
   }
 
   private emitProgress(): void {
-    const percentage =
-      this.totalChunks > 0
-        ? (this.processedChunks / this.totalChunks) * 100
-        : 0;
+    const percentage = this.totalChunks > 0
+      ? (this.processedChunks / this.totalChunks) * 100
+      : 0;
 
     this.emit('progress', {
       processed: this.processedChunks,
@@ -164,9 +177,19 @@ async function runUnitTests() {
   console.log('Test 3: Progress Events');
   try {
     const analyzer = new MockParallelAnalyzer({ maxWorkers: 1 });
-    const progressEvents: any[] = [];
+    const progressEvents: Array<{
+      processed: number;
+      total: number;
+      percentage: number;
+      activeWorkers: number;
+    }> = [];
 
-    analyzer.on('progress', (event) => progressEvents.push(event));
+    analyzer.on('progress', (event: {
+      processed: number;
+      total: number;
+      percentage: number;
+      activeWorkers: number;
+    }) => progressEvents.push(event));
 
     await analyzer.analyzeFunctionality([
       { category: 'test', files: [{ content: 'test' }] },
@@ -174,9 +197,9 @@ async function runUnitTests() {
 
     if (progressEvents.length > 0) {
       const lastEvent = progressEvents[progressEvents.length - 1];
-      if (lastEvent.percentage === 100 && lastEvent.processed === 1) {
+      if (lastEvent && lastEvent.percentage === 100 && lastEvent.processed === 1) {
         console.log(
-          `  ✅ Progress events working (${progressEvents.length} events)\n`
+          `  ✅ Progress events working (${progressEvents.length} events)\n`,
         );
         passed++;
       } else {
@@ -228,7 +251,12 @@ async function runUnitTests() {
     const analyzer = new MockParallelAnalyzer({ maxWorkers });
 
     let maxConcurrent = 0;
-    analyzer.on('progress', (event) => {
+    analyzer.on('progress', (event: {
+      processed: number;
+      total: number;
+      percentage: number;
+      activeWorkers: number;
+    }) => {
       maxConcurrent = Math.max(maxConcurrent, event.activeWorkers);
     });
 
@@ -243,12 +271,12 @@ async function runUnitTests() {
 
     if (maxConcurrent <= maxWorkers) {
       console.log(
-        `  ✅ Concurrency limit respected (max: ${maxConcurrent}/${maxWorkers})\n`
+        `  ✅ Concurrency limit respected (max: ${maxConcurrent}/${maxWorkers})\n`,
       );
       passed++;
     } else {
       throw new Error(
-        `Exceeded concurrency limit: ${maxConcurrent} > ${maxWorkers}`
+        `Exceeded concurrency limit: ${maxConcurrent} > ${maxWorkers}`,
       );
     }
 
@@ -300,11 +328,11 @@ async function runUnitTests() {
     console.log(`❌ ${failed} tests failed\n`);
   }
 
-  process.exit(failed > 0 ? 1 : 0);
+  Deno.exit(failed > 0 ? 1 : 0);
 }
 
 // Run tests
-if (require.main === module) {
+if (import.meta.main) {
   runUnitTests().catch(console.error);
 }
 

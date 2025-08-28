@@ -1,6 +1,7 @@
 // Simple test file for parallel processing functionality
-import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer';
-import { type CodeChunk } from '../src/types';
+import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
+import { type CodeChunk } from '../src/types/index.ts';
+import process from 'node:process';
 
 async function runTests() {
   console.log('🧪 Testing Parallel Processing Features\n');
@@ -52,10 +53,17 @@ async function runTests() {
     const analyzer = new ParallelAnalyzer({ maxWorkers: 1 });
     let progressEmitted = false;
 
-    analyzer.on('progress', (event) => {
+    analyzer.on('progress', (event: {
+      processed: number;
+      total: number;
+      percentage: number;
+      activeWorkers?: number;
+    }) => {
       progressEmitted = true;
       console.log(
-        `  📊 Progress: ${event.processed}/${event.total} (${event.percentage.toFixed(0)}%)`
+        `  📊 Progress: ${event.processed}/${event.total} (${
+          event.percentage.toFixed(0)
+        }%)`,
       );
     });
 
@@ -145,7 +153,7 @@ async function runTests() {
 
     if (results && memUsed < 100) {
       console.log(
-        `  ✅ Memory usage kept under limit (${memUsed.toFixed(1)}MB)`
+        `  ✅ Memory usage kept under limit (${memUsed.toFixed(1)}MB)`,
       );
       passed++;
     } else {
@@ -163,11 +171,11 @@ async function runTests() {
   console.log('\n' + '='.repeat(50));
   console.log(`\n📊 Test Results: ${passed} passed, ${failed} failed\n`);
 
-  process.exit(failed > 0 ? 1 : 0);
+  Deno.exit(failed > 0 ? 1 : 0);
 }
 
 // Run tests if this file is executed directly
-if (require.main === module) {
+if (import.meta.main) {
   runTests().catch(console.error);
 }
 

@@ -3,8 +3,9 @@
  * Tests core features without external dependencies
  */
 
-import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer';
-import { type CodeChunk } from '../src/types';
+import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
+import { type CodeChunk } from '../src/types/index.ts';
+import process from 'node:process';
 
 // Mock data for testing
 function createMockChunks(count: number): CodeChunk[] {
@@ -56,7 +57,7 @@ async function runRobustTests() {
 
       return true;
     },
-    results
+    results,
   );
 
   // Test 2: Progress Events
@@ -64,9 +65,19 @@ async function runRobustTests() {
     'Progress Event Emission',
     async () => {
       const analyzer = new ParallelAnalyzer({ maxWorkers: 1 });
-      const events: any[] = [];
+      const events: Array<{
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers?: number;
+      }> = [];
 
-      analyzer.on('progress', (event) => events.push(event));
+      analyzer.on('progress', (event: {
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers?: number;
+      }) => events.push(event));
 
       const chunks = createMockChunks(2);
       await analyzer.analyzeFunctionality(chunks);
@@ -78,13 +89,13 @@ async function runRobustTests() {
 
       // Verify event structure
       const lastEvent = events[events.length - 1];
-      if (!('percentage' in lastEvent) || !('processed' in lastEvent)) {
+      if (!lastEvent || !('percentage' in lastEvent) || !('processed' in lastEvent)) {
         throw new Error('Invalid progress event structure');
       }
 
       return true;
     },
-    results
+    results,
   );
 
   // Test 3: Error Resilience
@@ -117,7 +128,7 @@ async function runRobustTests() {
 
       return true;
     },
-    results
+    results,
   );
 
   // Test 4: Concurrency Control
@@ -130,7 +141,12 @@ async function runRobustTests() {
       let maxConcurrent = 0;
       let currentConcurrent = 0;
 
-      analyzer.on('progress', (event) => {
+      analyzer.on('progress', (event: {
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers?: number;
+      }) => {
         currentConcurrent = event.activeWorkers || 0;
         maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
       });
@@ -142,13 +158,13 @@ async function runRobustTests() {
       // Verify concurrency never exceeded limit
       if (maxConcurrent > maxWorkers) {
         throw new Error(
-          `Concurrency exceeded limit: ${maxConcurrent} > ${maxWorkers}`
+          `Concurrency exceeded limit: ${maxConcurrent} > ${maxWorkers}`,
         );
       }
 
       return true;
     },
-    results
+    results,
   );
 
   // Test 5: Memory Management
@@ -174,13 +190,13 @@ async function runRobustTests() {
       // Memory increase should be reasonable
       if (memoryIncrease > 150) {
         throw new Error(
-          `Excessive memory usage: ${memoryIncrease.toFixed(1)}MB`
+          `Excessive memory usage: ${memoryIncrease.toFixed(1)}MB`,
         );
       }
 
       return true;
     },
-    results
+    results,
   );
 
   // Test 6: Shutdown Cleanup
@@ -208,7 +224,7 @@ async function runRobustTests() {
       // For now, we just ensure shutdown completes without error
       return true;
     },
-    results
+    results,
   );
 
   // Print summary
@@ -225,14 +241,14 @@ async function runRobustTests() {
   console.log('\n' + '='.repeat(50) + '\n');
 
   // Exit with appropriate code
-  process.exit(results.failed > 0 ? 1 : 0);
+  Deno.exit(results.failed > 0 ? 1 : 0);
 }
 
 // Helper function to run individual tests
 async function runTest(
   name: string,
   testFn: () => Promise<boolean>,
-  results: { passed: number; failed: number; errors: string[] }
+  results: { passed: number; failed: number; errors: string[] },
 ) {
   process.stdout.write(`Testing: ${name}...`);
 
@@ -245,7 +261,9 @@ async function runTest(
     results.passed++;
   } catch (error) {
     console.log(` ❌`);
-    const errorMsg = `${name}: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMsg = `${name}: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
     console.log(`  Error: ${errorMsg}`);
     results.errors.push(errorMsg);
     results.failed++;
@@ -253,10 +271,10 @@ async function runTest(
 }
 
 // Run tests if executed directly
-if (require.main === module) {
+if (import.meta.main) {
   runRobustTests().catch((error) => {
     console.error('Fatal error:', error);
-    process.exit(1);
+    Deno.exit(1);
   });
 }
 

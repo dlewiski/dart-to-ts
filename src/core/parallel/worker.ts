@@ -1,9 +1,10 @@
 import { parentPort } from 'worker_threads';
 import {
-  type CodeChunk,
-  type ChunkAnalysisResult,
   type AnalysisOptions,
+  type ChunkAnalysisResult,
+  type CodeChunk,
 } from '../../types';
+import process from 'node:process';
 
 /**
  * Message received from the main thread containing work to process
@@ -34,7 +35,7 @@ interface WorkerResult {
  */
 async function analyzeChunk(
   chunk: CodeChunk,
-  _options: AnalysisOptions
+  _options: AnalysisOptions,
 ): Promise<ChunkAnalysisResult | null> {
   try {
     // For now, return a mock result for testing

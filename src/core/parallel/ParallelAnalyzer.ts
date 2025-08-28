@@ -1,14 +1,15 @@
-import { EventEmitter } from 'events';
-import { Worker } from 'worker_threads';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
+import { EventEmitter } from 'node:events';
+import { Worker } from 'node:worker_threads';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 import {
+  type AnalysisOptions,
   type CodeChunk,
   type FunctionalAnalysis,
-  type AnalysisOptions,
-} from '../../types';
-import { analyzeFunctionality as sequentialAnalyze } from '../../analyzer';
+} from '../../types/index.ts';
+import { analyzeFunctionality as sequentialAnalyze } from '../../analyzer.ts';
+import process from 'node:process';
 
 /**
  * Configuration options for parallel analysis
@@ -224,7 +225,7 @@ export class ParallelAnalyzer extends EventEmitter {
       return workerJsPath;
     } else {
       throw new Error(
-        `Worker file not found. Checked: ${workerTsPath}, ${workerJsPath}`
+        `Worker file not found. Checked: ${workerTsPath}, ${workerJsPath}`,
       );
     }
   }
@@ -292,8 +293,7 @@ export class ParallelAnalyzer extends EventEmitter {
   private shouldApplyBackpressure(): boolean {
     // Memory-based backpressure
     const memUsage = process.memoryUsage();
-    const memoryPressure =
-      this.options.maxMemory &&
+    const memoryPressure = this.options.maxMemory &&
       memUsage.heapUsed > this.options.maxMemory * 0.8; // 80% threshold
 
     // Queue-based backpressure
@@ -313,7 +313,7 @@ export class ParallelAnalyzer extends EventEmitter {
   private assignWorkToWorker(
     chunk: CodeChunk,
     resolve: (value: any) => void,
-    reject: (error: Error) => void
+    reject: (error: Error) => void,
   ): void {
     // Apply backpressure if necessary
     if (this.shouldApplyBackpressure()) {
@@ -384,7 +384,7 @@ export class ParallelAnalyzer extends EventEmitter {
    * @returns Promise resolving to the functional analysis results
    */
   private async processChunksInParallel(
-    chunks: CodeChunk[]
+    chunks: CodeChunk[],
   ): Promise<FunctionalAnalysis> {
     this.emitProgress();
 
@@ -418,7 +418,7 @@ export class ParallelAnalyzer extends EventEmitter {
    * @returns Promise resolving to the functional analysis results
    */
   private async processChunksWithProgress(
-    chunks: CodeChunk[]
+    chunks: CodeChunk[],
   ): Promise<FunctionalAnalysis> {
     this.emitProgress();
 
@@ -471,15 +471,15 @@ export class ParallelAnalyzer extends EventEmitter {
 
       if (memoryUsageRatio > 0.9) {
         console.warn(
-          'Memory limit critically high (>90%), forcing garbage collection...'
+          'Memory limit critically high (>90%), forcing garbage collection...',
         );
-        if (global.gc) {
-          global.gc();
+        if ((globalThis as any).gc) {
+          (globalThis as any).gc();
         }
       } else if (memoryUsageRatio > 0.8) {
         console.warn('Memory limit approaching (>80%), throttling...');
-        if (global.gc) {
-          global.gc();
+        if ((globalThis as any).gc) {
+          (globalThis as any).gc();
         }
       }
     }
@@ -533,7 +533,7 @@ export class ParallelAnalyzer extends EventEmitter {
         available: this.availableWorkers.length,
         busy: this.busyWorkers.size,
         healthy: Array.from(this.workerHealth.values()).filter(
-          (h) => h.isHealthy
+          (h) => h.isHealthy,
         ).length,
       },
       queue: {
@@ -597,36 +597,36 @@ export class ParallelAnalyzer extends EventEmitter {
         merged.userWorkflows.push(...(analysis.userWorkflows || []));
         merged.dataFlow.sources.push(...(analysis.dataFlow?.sources || []));
         merged.dataFlow.transformations.push(
-          ...(analysis.dataFlow?.transformations || [])
+          ...(analysis.dataFlow?.transformations || []),
         );
         merged.dataFlow.destinations.push(
-          ...(analysis.dataFlow?.destinations || [])
+          ...(analysis.dataFlow?.destinations || []),
         );
         merged.stateManagement.keyActions.push(
-          ...(analysis.stateManagement?.keyActions || [])
+          ...(analysis.stateManagement?.keyActions || []),
         );
         merged.stateManagement.selectors.push(
-          ...(analysis.stateManagement?.selectors || [])
+          ...(analysis.stateManagement?.selectors || []),
         );
         merged.businessLogic.rules.push(
-          ...(analysis.businessLogic?.rules || [])
+          ...(analysis.businessLogic?.rules || []),
         );
         merged.businessLogic.validations.push(
-          ...(analysis.businessLogic?.validations || [])
+          ...(analysis.businessLogic?.validations || []),
         );
         merged.businessLogic.calculations.push(
-          ...(analysis.businessLogic?.calculations || [])
+          ...(analysis.businessLogic?.calculations || []),
         );
         merged.dependencies.dart.push(...(analysis.dependencies?.dart || []));
 
         // Merge objects
         Object.assign(
           merged.dependencies.tsEquivalents,
-          analysis.dependencies?.tsEquivalents || {}
+          analysis.dependencies?.tsEquivalents || {},
         );
         Object.assign(
           merged.stateManagement.stateShape,
-          analysis.stateManagement?.stateShape || {}
+          analysis.stateManagement?.stateShape || {},
         );
 
         // Take first non-empty pattern
@@ -669,10 +669,9 @@ export class ParallelAnalyzer extends EventEmitter {
    * @private
    */
   private emitProgress(): void {
-    const percentage =
-      this.totalChunks > 0
-        ? (this.processedChunks / this.totalChunks) * 100
-        : 0;
+    const percentage = this.totalChunks > 0
+      ? (this.processedChunks / this.totalChunks) * 100
+      : 0;
 
     const progressEvent: ProgressEvent = {
       processed: this.processedChunks,
