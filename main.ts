@@ -75,6 +75,8 @@ async function prepareAnalysisConfig(
     noCache: !options.cache as boolean,
     model: validatedModel,
     timeout: (options.timeout as number) * 1000, // Convert seconds to milliseconds
+    parallel: options.parallel as boolean,
+    workers: options.workers as number,
   };
 
   return { path: analysisPath, options: cliOptions };
@@ -129,6 +131,16 @@ if (import.meta.main) {
       '-t, --timeout <seconds:number>',
       'Timeout for analysis in seconds',
       { default: 600 },
+    )
+    .option(
+      '-p, --parallel',
+      'Enable parallel processing for faster analysis',
+      { default: false },
+    )
+    .option(
+      '-w, --workers <count:number>',
+      'Number of parallel workers (default: 4)',
+      { default: 4 },
     )
     .action(async (options, projectPath?: string) => {
       try {

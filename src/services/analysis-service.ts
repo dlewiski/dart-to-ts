@@ -107,7 +107,7 @@ export class AnalysisService {
     // Use parallel processing if enabled
     if (options.parallel) {
       const { ParallelAnalyzer } = await import(
-        '../core/parallel/ParallelAnalyzer'
+        '../core/parallel/ParallelAnalyzer.ts'
       );
       const parallelAnalyzer = new ParallelAnalyzer({
         ...analysisOptions,
