@@ -35,6 +35,8 @@ export interface CLIOptions {
   verbose?: boolean;
   noCache?: boolean;
   timeout?: number;
+  parallel?: boolean;
+  workers?: number;
 }
 
 // Security constraints
