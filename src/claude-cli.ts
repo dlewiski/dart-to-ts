@@ -5,6 +5,23 @@ import {
   TimeoutError,
   TIMEOUTS,
 } from './types/index.ts';
+import {
+  type ErrorContext,
+  logError,
+  logWarning,
+} from './utils/error-handling.ts';
+
+// Constants extracted from magic numbers
+const RETRY_CONFIG = {
+  EXPONENTIAL_BASE: 2,
+  BASE_WAIT_TIME_MS: 1000,
+  SIGTERM_TIMEOUT_MS: 2000,
+} as const;
+
+const PROCESS_SIGNALS = {
+  SIGTERM: 'SIGTERM',
+  SIGKILL: 'SIGKILL',
+} as const;
 
 /**
  * Execute a prompt using Claude CLI with Deno subprocess
@@ -58,18 +75,25 @@ export async function executeClaude(
 
       return { result: result.trim(), raw: result };
     } catch (error) {
+      const errorContext: ErrorContext = {
+        operation: 'Claude CLI execution',
+        details: { attempt, maxRetries, model, outputFormat },
+      };
+
       if (attempt === maxRetries) {
+        logError(error, errorContext);
         const errorMessage = error instanceof Error
           ? error.message
           : String(error);
-        return {
-          result: null,
-          error: `Failed after ${maxRetries} attempts: ${errorMessage}`,
-        };
+        throw new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`);
       }
 
+      // Log retry attempt
+      logWarning(`Attempt ${attempt} failed, retrying...`, errorContext);
+
       // Wait before retry with exponential backoff
-      const waitTime = Math.pow(2, attempt) * 1000;
+      const waitTime = Math.pow(RETRY_CONFIG.EXPONENTIAL_BASE, attempt) *
+        RETRY_CONFIG.BASE_WAIT_TIME_MS;
       if (verbose) {
         console.log(`[Claude CLI] Retry in ${waitTime}ms...`);
       }
@@ -77,7 +101,8 @@ export async function executeClaude(
     }
   }
 
-  return { result: null, error: 'Unexpected error' };
+  // This should never be reached due to the throw above, but TypeScript needs it
+  throw new Error('Unexpected error: all retry attempts exhausted');
 }
 
 /**
@@ -104,15 +129,38 @@ async function executeClaudeSubprocess(
   await writer.write(encoder.encode(prompt));
   await writer.close();
 
-  // Set up timeout
+  // Set up timeout with robust process cleanup
   let timeoutId: number | null = null;
+  let isProcessTerminated = false;
+
   if (timeout > 0) {
     timeoutId = setTimeout(() => {
+      if (isProcessTerminated) return;
+
       try {
-        process.kill();
-      } catch (e) {
+        // First attempt: graceful termination with SIGTERM
+        process.kill(PROCESS_SIGNALS.SIGTERM);
+
+        // Wait briefly, then force kill if process hasn't exited
+        setTimeout(() => {
+          if (!isProcessTerminated) {
+            try {
+              process.kill(PROCESS_SIGNALS.SIGKILL);
+              if (verbose) {
+                console.log(
+                  '[Claude CLI] Process forcefully terminated with SIGKILL',
+                );
+              }
+            } catch (killError) {
+              if (verbose) {
+                console.error('[Claude CLI] Error during SIGKILL:', killError);
+              }
+            }
+          }
+        }, RETRY_CONFIG.SIGTERM_TIMEOUT_MS);
+      } catch (termError) {
         if (verbose) {
-          console.error('[Claude CLI] Error killing process:', e);
+          console.error('[Claude CLI] Error during SIGTERM:', termError);
         }
       }
     }, timeout);
@@ -120,6 +168,9 @@ async function executeClaudeSubprocess(
 
   try {
     const { code, stdout, stderr } = await process.output();
+
+    // Mark process as terminated to prevent timeout handler from acting
+    isProcessTerminated = true;
 
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -139,13 +190,31 @@ async function executeClaudeSubprocess(
 
     return stdoutStr;
   } catch (error) {
+    // Mark process as terminated and cleanup timeout
+    isProcessTerminated = true;
+
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
-    if (error instanceof Error && error.message.includes('timed out')) {
+    // Enhanced timeout detection
+    if (
+      error instanceof Error && (
+        error.message.includes('timed out') ||
+        error.message.includes('timeout') ||
+        error.message.includes('killed')
+      )
+    ) {
       throw new TimeoutError('Claude CLI execution', timeout);
     }
+
+    // Log the error with context before rethrowing
+    const errorContext: ErrorContext = {
+      operation: 'Claude subprocess execution',
+      details: { args, timeout },
+    };
+    logError(error, errorContext);
+
     throw error;
   }
 }

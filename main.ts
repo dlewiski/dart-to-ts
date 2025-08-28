@@ -81,17 +81,21 @@ async function prepareAnalysisConfig(
 }
 
 /**
- * Validate the Claude model option
+ * Type guard to validate Claude model option
+ */
+function isValidModel(model: string): model is 'sonnet' | 'opus' {
+  return model === 'sonnet' || model === 'opus';
+}
+
+/**
+ * Validate the Claude model option with proper type safety
  */
 function validateModelOption(modelInput: string): 'sonnet' | 'opus' {
-  const model = modelInput as 'sonnet' | 'opus';
-  const validModels = ['sonnet', 'opus'] as const;
-
-  if (!validModels.includes(model)) {
-    throw new Error(`Invalid model "${model}". Use 'sonnet' or 'opus'.`);
+  if (!isValidModel(modelInput)) {
+    throw new Error(`Invalid model "${modelInput}". Use 'sonnet' or 'opus'.`);
   }
 
-  return model;
+  return modelInput;
 }
 
 // Main CLI entry point
