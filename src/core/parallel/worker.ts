@@ -1,10 +1,10 @@
-import { parentPort } from 'worker_threads';
+// Deno Worker script - replaces Node.js worker_threads approach
+
 import {
   type AnalysisOptions,
   type ChunkAnalysisResult,
   type CodeChunk,
-} from '../../types';
-import process from 'node:process';
+} from '../../types/index.ts';
 
 /**
  * Message received from the main thread containing work to process
@@ -59,11 +59,11 @@ async function analyzeChunk(
 }
 
 /**
- * Main worker message handler
+ * Main worker message handler for Deno
  * Listens for messages from the main thread and processes them
  */
-parentPort?.on('message', async (message: WorkerMessage) => {
-  const { chunk, options } = message;
+self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
+  const { chunk, options } = event.data;
 
   try {
     const analysis = await analyzeChunk(chunk, options);
@@ -74,7 +74,7 @@ parentPort?.on('message', async (message: WorkerMessage) => {
       chunkCategory: chunk.category,
     };
 
-    parentPort?.postMessage(response);
+    self.postMessage(response);
   } catch (error) {
     const response: WorkerResult = {
       success: false,
@@ -82,36 +82,34 @@ parentPort?.on('message', async (message: WorkerMessage) => {
       chunkCategory: chunk.category,
     };
 
-    parentPort?.postMessage(response);
+    self.postMessage(response);
   }
 });
 
 /**
- * Handle uncaught exceptions gracefully
+ * Handle uncaught exceptions gracefully in Deno worker
  */
-process.on('uncaughtException', (error) => {
+self.addEventListener('error', (error) => {
   console.error('Worker uncaught exception:', error);
   const response: WorkerResult = {
     success: false,
-    error: error.message,
+    error: error.message || 'Unknown error',
     chunkCategory: 'unknown',
   };
 
-  parentPort?.postMessage(response);
-  process.exit(1);
+  self.postMessage(response);
 });
 
 /**
- * Handle unhandled promise rejections
+ * Handle unhandled promise rejections in Deno worker
  */
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Worker unhandled rejection at:', promise, 'reason:', reason);
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('Worker unhandled rejection:', event.reason);
   const response: WorkerResult = {
     success: false,
-    error: reason instanceof Error ? reason.message : String(reason),
+    error: event.reason instanceof Error ? event.reason.message : String(event.reason),
     chunkCategory: 'unknown',
   };
 
-  parentPort?.postMessage(response);
-  process.exit(1);
+  self.postMessage(response);
 });
