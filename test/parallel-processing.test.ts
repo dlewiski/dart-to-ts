@@ -1,7 +1,6 @@
 // Simple test file for parallel processing functionality
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
 import { type CodeChunk } from '../src/types/index.ts';
-import process from 'node:process';
 
 async function runTests() {
   console.log('🧪 Testing Parallel Processing Features\n');
@@ -53,16 +52,17 @@ async function runTests() {
     const analyzer = new ParallelAnalyzer({ maxWorkers: 1 });
     let progressEmitted = false;
 
-    analyzer.on('progress', (event: {
-      processed: number;
-      total: number;
-      percentage: number;
-      activeWorkers?: number;
-    }) => {
+    analyzer.on('progress', (event: CustomEvent) => {
+      const detail = event.detail as {
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers?: number;
+      };
       progressEmitted = true;
       console.log(
-        `  📊 Progress: ${event.processed}/${event.total} (${
-          event.percentage.toFixed(0)
+        `  📊 Progress: ${detail.processed}/${detail.total} (${
+          detail.percentage.toFixed(0)
         }%)`,
       );
     });
@@ -146,9 +146,9 @@ async function runTests() {
       },
     ];
 
-    const memBefore = process.memoryUsage().heapUsed;
+    const memBefore = Deno.memoryUsage().heapUsed;
     const results = await analyzer.analyzeFunctionality(chunks);
-    const memAfter = process.memoryUsage().heapUsed;
+    const memAfter = Deno.memoryUsage().heapUsed;
     const memUsed = (memAfter - memBefore) / 1024 / 1024;
 
     if (results && memUsed < 100) {

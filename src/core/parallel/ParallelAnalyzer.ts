@@ -17,11 +17,11 @@ class DenoEventEmitter extends EventTarget {
   }
 
   on(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.addEventListener(eventName, listener);
+    this.addEventListener(eventName, listener as EventListener);
   }
 
   off(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.removeEventListener(eventName, listener);
+    this.removeEventListener(eventName, listener as EventListener);
   }
 
   removeAllListeners(): void {
@@ -56,7 +56,7 @@ export interface ParallelOptions extends AnalysisOptions {
  */
 interface WorkItem {
   chunk: CodeChunk;
-  resolve: (value: any) => void;
+  resolve: (value: Partial<FunctionalAnalysis>) => void;
   reject: (error: Error) => void;
 }
 
@@ -139,7 +139,11 @@ export class ParallelAnalyzer extends DenoEventEmitter {
    * @param workerPath Path to the worker script
    */
   private createWorker(workerPath: string): void {
-    const worker = new Worker(workerPath, { type: "module", deno: { permissions: { read: true, write: true } } });
+    const worker = new Worker(workerPath, { 
+      type: "module", 
+      // @ts-ignore - Deno-specific Worker option
+      deno: { permissions: { read: true, write: true } } 
+    });
     this.availableWorkers.push(worker);
 
     // Initialize health tracking
@@ -218,7 +222,6 @@ export class ParallelAnalyzer extends DenoEventEmitter {
   private resolveWorkerPath(): string {
     const currentDir = new URL('.', import.meta.url).pathname;
     const workerTsPath = resolve(currentDir, 'worker.ts');
-    const workerJsPath = resolve(currentDir, 'worker.js');
 
     // In Deno, we prefer TypeScript files and use import.meta.url for module resolution
     // For now, we'll return the TypeScript path as Deno can handle TS directly

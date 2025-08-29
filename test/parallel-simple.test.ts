@@ -5,7 +5,6 @@
 
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
 import { type CodeChunk } from '../src/types/index.ts';
-import process from 'node:process';
 
 // Mock data for testing
 function createMockChunks(count: number): CodeChunk[] {
@@ -72,12 +71,15 @@ async function runRobustTests() {
         activeWorkers?: number;
       }> = [];
 
-      analyzer.on('progress', (event: {
-        processed: number;
-        total: number;
-        percentage: number;
-        activeWorkers?: number;
-      }) => events.push(event));
+      analyzer.on('progress', (event: CustomEvent) => {
+        const detail = event.detail as {
+          processed: number;
+          total: number;
+          percentage: number;
+          activeWorkers?: number;
+        };
+        events.push(detail);
+      });
 
       const chunks = createMockChunks(2);
       await analyzer.analyzeFunctionality(chunks);
@@ -141,13 +143,14 @@ async function runRobustTests() {
       let maxConcurrent = 0;
       let currentConcurrent = 0;
 
-      analyzer.on('progress', (event: {
-        processed: number;
-        total: number;
-        percentage: number;
-        activeWorkers?: number;
-      }) => {
-        currentConcurrent = event.activeWorkers || 0;
+      analyzer.on('progress', (event: CustomEvent) => {
+        const detail = event.detail as {
+          processed: number;
+          total: number;
+          percentage: number;
+          activeWorkers?: number;
+        };
+        currentConcurrent = detail.activeWorkers || 0;
         maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
       });
 
@@ -176,13 +179,13 @@ async function runRobustTests() {
         maxMemory: 200 * 1024 * 1024, // 200MB
       });
 
-      const initialMemory = process.memoryUsage().heapUsed;
+      const initialMemory = Deno.memoryUsage().heapUsed;
 
       // Process moderate amount of data
       const chunks = createMockChunks(10);
       await analyzer.analyzeFunctionality(chunks);
 
-      const finalMemory = process.memoryUsage().heapUsed;
+      const finalMemory = Deno.memoryUsage().heapUsed;
       const memoryIncrease = (finalMemory - initialMemory) / 1024 / 1024; // MB
 
       await analyzer.shutdown();
@@ -250,7 +253,7 @@ async function runTest(
   testFn: () => Promise<boolean>,
   results: { passed: number; failed: number; errors: string[] },
 ) {
-  process.stdout.write(`Testing: ${name}...`);
+  await Deno.stdout.write(new TextEncoder().encode(`Testing: ${name}...`));
 
   try {
     const startTime = Date.now();

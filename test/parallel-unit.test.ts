@@ -3,10 +3,28 @@
  * Uses mocks to test core functionality quickly
  */
 
-import { EventEmitter } from 'node:events';
+// Deno-compatible EventEmitter implementation
+class DenoEventEmitter extends EventTarget {
+  emit(eventName: string, data?: any): void {
+    this.dispatchEvent(new CustomEvent(eventName, { detail: data }));
+  }
+
+  on(eventName: string, listener: (event: CustomEvent) => void): void {
+    this.addEventListener(eventName, listener as EventListener);
+  }
+
+  off(eventName: string, listener: (event: CustomEvent) => void): void {
+    this.removeEventListener(eventName, listener as EventListener);
+  }
+
+  removeAllListeners(): void {
+    // Note: EventTarget doesn't provide a direct way to remove all listeners
+    // This is a simplified implementation for testing
+  }
+}
 
 // Simple mock analyzer for testing
-class MockParallelAnalyzer extends EventEmitter {
+class MockParallelAnalyzer extends DenoEventEmitter {
   private processedChunks = 0;
   private totalChunks = 0;
   private activeWorkers = 0;
@@ -184,12 +202,15 @@ async function runUnitTests() {
       activeWorkers: number;
     }> = [];
 
-    analyzer.on('progress', (event: {
-      processed: number;
-      total: number;
-      percentage: number;
-      activeWorkers: number;
-    }) => progressEvents.push(event));
+    analyzer.on('progress', (event: CustomEvent) => {
+      const detail = event.detail as {
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers: number;
+      };
+      progressEvents.push(detail);
+    });
 
     await analyzer.analyzeFunctionality([
       { category: 'test', files: [{ content: 'test' }] },
@@ -251,13 +272,14 @@ async function runUnitTests() {
     const analyzer = new MockParallelAnalyzer({ maxWorkers });
 
     let maxConcurrent = 0;
-    analyzer.on('progress', (event: {
-      processed: number;
-      total: number;
-      percentage: number;
-      activeWorkers: number;
-    }) => {
-      maxConcurrent = Math.max(maxConcurrent, event.activeWorkers);
+    analyzer.on('progress', (event: CustomEvent) => {
+      const detail = event.detail as {
+        processed: number;
+        total: number;
+        percentage: number;
+        activeWorkers: number;
+      };
+      maxConcurrent = Math.max(maxConcurrent, detail.activeWorkers);
     });
 
     const chunks = Array(5)

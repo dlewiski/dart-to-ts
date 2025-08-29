@@ -6,7 +6,6 @@
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
 import { analyzeFunctionality } from '../src/analyzer.ts';
 import { type CodeChunk } from '../src/types/index.ts';
-import process from 'node:process';
 
 // Create realistic test data
 function createTestChunks(count: number): CodeChunk[] {
@@ -94,7 +93,7 @@ async function runPerformanceTests() {
     // Test 1: Sequential processing (baseline)
     console.log('Running sequential analysis...');
     const sequentialStart = Date.now();
-    const sequentialMemStart = process.memoryUsage().heapUsed;
+    const sequentialMemStart = Deno.memoryUsage().heapUsed;
 
     try {
       await analyzeFunctionality(chunks, {
@@ -108,12 +107,12 @@ async function runPerformanceTests() {
 
     const sequentialTime = Date.now() - sequentialStart;
     const sequentialMemUsed =
-      (process.memoryUsage().heapUsed - sequentialMemStart) / 1024 / 1024;
+      (Deno.memoryUsage().heapUsed - sequentialMemStart) / 1024 / 1024;
 
     // Test 2: Parallel processing
     console.log(`Running parallel analysis (${config.workers} workers)...`);
     const parallelStart = Date.now();
-    const parallelMemStart = process.memoryUsage().heapUsed;
+    const parallelMemStart = Deno.memoryUsage().heapUsed;
 
     const parallelAnalyzer = new ParallelAnalyzer({
       maxWorkers: config.workers,
@@ -129,7 +128,7 @@ async function runPerformanceTests() {
 
     const parallelTime = Date.now() - parallelStart;
     const parallelMemUsed =
-      (process.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
+      (Deno.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
 
     await parallelAnalyzer.shutdown();
 
