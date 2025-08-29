@@ -5,60 +5,19 @@
 
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
 import { analyzeFunctionality } from '../src/analyzer.ts';
-import { type CodeChunk } from '../src/types/index.ts';
+import { createRealisticChunks } from './helpers/test-fixtures.ts';
+import { timing } from './helpers/test-runner.ts';
 
-// Create realistic test data
-function createTestChunks(count: number): CodeChunk[] {
-  const categories = ['components', 'services', 'state', 'utils'];
-
-  return Array.from({ length: count }, (_, i) => ({
-    category: categories[i % categories.length] as string,
-    files: [
-      {
-        path: `lib/src/${categories[i % categories.length]}/file_${i}.dart`,
-        content: `
-        import 'package:flutter/material.dart';
-        
-        class ${
-          categories[i % categories.length]
-        }Class${i} extends StatelessWidget {
-          final String data;
-          
-          const ${
-          categories[i % categories.length]
-        }Class${i}({required this.data});
-          
-          @override
-          Widget build(BuildContext context) {
-            return Container(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text(data),
-                  ElevatedButton(
-                    onPressed: () => handleAction(),
-                    child: Text('Action $i'),
-                  ),
-                ],
-              ),
-            );
-          }
-          
-          void handleAction() {
-            // Simulate some business logic
-            final result = processData(data);
-            print('Processed: $result');
-          }
-          
-          String processData(String input) {
-            return input.toUpperCase();
-          }
-        }
-      `.trim(),
-      },
-    ],
-    context: `Performance test chunk ${i}`,
-  }));
+interface PerformanceResult {
+  config: string;
+  chunks: number;
+  workers: number;
+  sequentialTime: number;
+  parallelTime: number;
+  speedup: string;
+  sequentialMem: string;
+  parallelMem: string;
+  memoryRatio: string;
 }
 
 async function runPerformanceTests() {
@@ -72,46 +31,37 @@ async function runPerformanceTests() {
     { chunks: 10, workers: 4, name: 'Large (10 chunks)' },
   ];
 
-  const results: Array<{
-    config: string;
-    chunks: number;
-    workers: number;
-    sequentialTime: number;
-    parallelTime: number;
-    speedup: string;
-    sequentialMem: string;
-    parallelMem: string;
-    memoryRatio: string;
-  }> = [];
+  const results: PerformanceResult[] = [];
 
   for (const config of testConfigs) {
     console.log(`\n📊 Testing: ${config.name}`);
     console.log('-'.repeat(40));
 
-    const chunks = createTestChunks(config.chunks);
+    // Use realistic chunks for better performance testing
+    const allChunks = createRealisticChunks();
+    const chunks = allChunks.slice(0, config.chunks);
 
     // Test 1: Sequential processing (baseline)
     console.log('Running sequential analysis...');
-    const sequentialStart = Date.now();
     const sequentialMemStart = Deno.memoryUsage().heapUsed;
 
-    try {
-      await analyzeFunctionality(chunks, {
-        useCache: false,
-        timeout: 30000,
-        verbose: false,
-      });
-    } catch (_error) {
-      console.log('  ⚠️  Sequential analysis failed (expected in test env)');
-    }
+    const { duration: sequentialTime } = await timing.measure(async () => {
+      try {
+        await analyzeFunctionality(chunks, {
+          useCache: false,
+          timeout: 30000,
+          verbose: false,
+        });
+      } catch (_error) {
+        // Expected in test environment
+      }
+    });
 
-    const sequentialTime = Date.now() - sequentialStart;
     const sequentialMemUsed =
       (Deno.memoryUsage().heapUsed - sequentialMemStart) / 1024 / 1024;
 
     // Test 2: Parallel processing
     console.log(`Running parallel analysis (${config.workers} workers)...`);
-    const parallelStart = Date.now();
     const parallelMemStart = Deno.memoryUsage().heapUsed;
 
     const parallelAnalyzer = new ParallelAnalyzer({
@@ -120,13 +70,14 @@ async function runPerformanceTests() {
       verbose: false,
     });
 
-    try {
-      await parallelAnalyzer.analyzeFunctionality(chunks);
-    } catch (_error) {
-      console.log('  ⚠️  Parallel analysis failed (expected in test env)');
-    }
+    const { duration: parallelTime } = await timing.measure(async () => {
+      try {
+        await parallelAnalyzer.analyzeFunctionality(chunks);
+      } catch (_error) {
+        // Expected in test environment
+      }
+    });
 
-    const parallelTime = Date.now() - parallelStart;
     const parallelMemUsed =
       (Deno.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
 
@@ -137,7 +88,7 @@ async function runPerformanceTests() {
     const memoryRatio = parallelMemUsed / sequentialMemUsed;
 
     // Store results
-    const result = {
+    const result: PerformanceResult = {
       config: config.name,
       chunks: config.chunks,
       workers: config.workers,
@@ -154,17 +105,17 @@ async function runPerformanceTests() {
     // Display results
     console.log('\nResults:');
     console.log(
-      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`,
+      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`
     );
     console.log(
-      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`,
+      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`
     );
     console.log(`  Speedup:    ${speedup.toFixed(2)}x`);
     console.log(`  Memory:     ${memoryRatio.toFixed(2)}x`);
 
     if (speedup > 1) {
       console.log(
-        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`,
+        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`
       );
     } else {
       console.log(`  ⚠️  No speedup achieved`);
@@ -181,7 +132,7 @@ async function runPerformanceTests() {
       'Parallel (ms)': r.parallelTime,
       Speedup: `${r.speedup}x`,
       'Memory Ratio': `${r.memoryRatio}x`,
-    })),
+    }))
   );
 
   // Overall assessment

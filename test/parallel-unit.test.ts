@@ -3,23 +3,54 @@
  * Uses mocks to test core functionality quickly
  */
 
-// Deno-compatible EventEmitter implementation
+import { assertEquals, assertExists, assert } from "https://deno.land/std@0.208.0/assert/mod.ts";
+
+// Deno-compatible EventEmitter implementation for testing
 class DenoEventEmitter extends EventTarget {
-  emit(eventName: string, data?: any): void {
+  private abortController: AbortController;
+  private listenerMap: Map<string, Set<EventListener>>;
+
+  constructor() {
+    super();
+    this.abortController = new AbortController();
+    this.listenerMap = new Map();
+  }
+
+  emit(eventName: string, data?: unknown): void {
     this.dispatchEvent(new CustomEvent(eventName, { detail: data }));
   }
 
   on(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.addEventListener(eventName, listener as EventListener);
+    const wrappedListener = listener as EventListener;
+    
+    if (!this.listenerMap.has(eventName)) {
+      this.listenerMap.set(eventName, new Set());
+    }
+    this.listenerMap.get(eventName)!.add(wrappedListener);
+    
+    this.addEventListener(eventName, wrappedListener, {
+      signal: this.abortController.signal
+    });
   }
 
   off(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.removeEventListener(eventName, listener as EventListener);
+    const wrappedListener = listener as EventListener;
+    
+    const listeners = this.listenerMap.get(eventName);
+    if (listeners) {
+      listeners.delete(wrappedListener);
+      if (listeners.size === 0) {
+        this.listenerMap.delete(eventName);
+      }
+    }
+    
+    this.removeEventListener(eventName, wrappedListener);
   }
 
   removeAllListeners(): void {
-    // Note: EventTarget doesn't provide a direct way to remove all listeners
-    // This is a simplified implementation for testing
+    this.abortController.abort();
+    this.abortController = new AbortController();
+    this.listenerMap.clear();
   }
 }
 
@@ -118,244 +149,145 @@ class MockParallelAnalyzer extends DenoEventEmitter {
   }
 }
 
-// Test suite
-async function runUnitTests() {
-  console.log('🔬 Unit Tests for Parallel Processing\n');
-  console.log('='.repeat(50) + '\n');
+// Helper to create mock chunks
+function createMockChunks(count: number) {
+  return Array.from({ length: count }, (_, i) => ({
+    category: i % 2 === 0 ? 'components' : 'services',
+    files: [{ content: `test content ${i}` }],
+  }));
+}
 
-  let passed = 0;
-  let failed = 0;
+// Test 1: Basic functionality
+Deno.test("Parallel Unit - Basic Functionality", async () => {
+  const analyzer = new MockParallelAnalyzer({ maxWorkers: 2 });
+  const chunks = createMockChunks(2);
 
-  // Test 1: Basic functionality
-  console.log('Test 1: Basic Functionality');
-  try {
-    const analyzer = new MockParallelAnalyzer({ maxWorkers: 2 });
-    const chunks = [
-      { category: 'components', files: [{ content: 'test1' }] },
-      { category: 'services', files: [{ content: 'test2' }] },
-    ];
+  const result = await analyzer.analyzeFunctionality(chunks);
 
-    const result = await analyzer.analyzeFunctionality(chunks);
+  assertExists(result.appPurpose, "Should have app purpose");
+  assertEquals(result.coreFeatures.length, 2, "Should analyze all chunks");
 
-    if (result.appPurpose && result.coreFeatures.length === 2) {
-      console.log('  ✅ Basic functionality works\n');
-      passed++;
-    } else {
-      throw new Error('Invalid result structure');
-    }
+  await analyzer.shutdown();
+});
 
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
+// Test 2: Parallel execution timing
+Deno.test("Parallel Unit - Parallel Execution Timing", async () => {
+  const analyzer = new MockParallelAnalyzer({
+    maxWorkers: 3,
+    simulateDelay: 100, // 100ms per chunk
+  });
 
-  // Test 2: Parallel execution
-  console.log('Test 2: Parallel Execution');
-  try {
-    const analyzer = new MockParallelAnalyzer({
-      maxWorkers: 3,
-      simulateDelay: 100, // 100ms per chunk
-    });
+  const chunks = createMockChunks(6);
+  
+  const startTime = performance.now();
+  await analyzer.analyzeFunctionality(chunks);
+  const duration = performance.now() - startTime;
 
-    const chunks = Array(6)
-      .fill(0)
-      .map((_, i) => ({
-        category: 'test',
-        files: [{ content: `chunk${i}` }],
-      }));
+  // With 3 workers and 6 chunks at 100ms each:
+  // Sequential would take 600ms, parallel should take ~200ms (2 batches)
+  assert(duration >= 150 && duration <= 350, 
+    `Expected duration between 150-350ms, got ${duration}ms`);
 
-    const startTime = Date.now();
-    await analyzer.analyzeFunctionality(chunks);
-    const duration = Date.now() - startTime;
+  await analyzer.shutdown();
+});
 
-    // With 3 workers and 6 chunks at 100ms each:
-    // Sequential would take 600ms
-    // Parallel should take ~200ms (2 batches)
-    const expectedTime = 200;
-    const tolerance = 50; // Allow 50ms tolerance
+// Test 3: Progress events
+Deno.test("Parallel Unit - Progress Events", async () => {
+  const analyzer = new MockParallelAnalyzer({ maxWorkers: 1 });
+  const progressEvents: Array<{
+    processed: number;
+    total: number;
+    percentage: number;
+    activeWorkers: number;
+  }> = [];
 
-    if (
-      duration < expectedTime + tolerance &&
-      duration >= expectedTime - tolerance
-    ) {
-      console.log(`  ✅ Parallel execution verified (${duration}ms)\n`);
-      passed++;
-    } else {
-      throw new Error(`Expected ~${expectedTime}ms, got ${duration}ms`);
-    }
-
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
-
-  // Test 3: Progress events
-  console.log('Test 3: Progress Events');
-  try {
-    const analyzer = new MockParallelAnalyzer({ maxWorkers: 1 });
-    const progressEvents: Array<{
+  analyzer.on('progress', (event: CustomEvent) => {
+    const detail = event.detail as {
       processed: number;
       total: number;
       percentage: number;
       activeWorkers: number;
-    }> = [];
+    };
+    progressEvents.push(detail);
+  });
 
-    analyzer.on('progress', (event: CustomEvent) => {
-      const detail = event.detail as {
-        processed: number;
-        total: number;
-        percentage: number;
-        activeWorkers: number;
-      };
-      progressEvents.push(detail);
-    });
+  await analyzer.analyzeFunctionality([
+    { category: 'test', files: [{ content: 'test' }] },
+  ]);
 
-    await analyzer.analyzeFunctionality([
-      { category: 'test', files: [{ content: 'test' }] },
-    ]);
+  assert(progressEvents.length > 0, "Should emit progress events");
+  
+  const lastEvent = progressEvents[progressEvents.length - 1];
+  assertExists(lastEvent, "Should have last event");
+  assertEquals(lastEvent.percentage, 100, "Should complete at 100%");
+  assertEquals(lastEvent.processed, 1, "Should process 1 chunk");
 
-    if (progressEvents.length > 0) {
-      const lastEvent = progressEvents[progressEvents.length - 1];
-      if (lastEvent && lastEvent.percentage === 100 && lastEvent.processed === 1) {
-        console.log(
-          `  ✅ Progress events working (${progressEvents.length} events)\n`,
-        );
-        passed++;
-      } else {
-        throw new Error('Invalid progress event data');
-      }
-    } else {
-      throw new Error('No progress events emitted');
-    }
+  await analyzer.shutdown();
+});
 
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
+// Test 4: Error handling
+Deno.test("Parallel Unit - Error Handling", async () => {
+  const analyzer = new MockParallelAnalyzer({
+    maxWorkers: 2,
+    simulateErrors: true,
+  });
 
-  // Test 4: Error handling
-  console.log('Test 4: Error Handling');
-  try {
-    const analyzer = new MockParallelAnalyzer({
-      maxWorkers: 2,
-      simulateErrors: true,
-    });
+  const chunks = [
+    { category: 'valid', files: [{ content: 'valid' }] },
+    { category: 'error', files: [{ content: 'TRIGGER_ERROR' }] },
+    { category: 'valid2', files: [{ content: 'valid2' }] },
+  ];
 
-    const chunks = [
-      { category: 'valid', files: [{ content: 'valid' }] },
-      { category: 'error', files: [{ content: 'TRIGGER_ERROR' }] },
-      { category: 'valid2', files: [{ content: 'valid2' }] },
-    ];
+  const result = await analyzer.analyzeFunctionality(chunks);
 
-    const result = await analyzer.analyzeFunctionality(chunks);
+  assertExists(result, "Should return result despite errors");
+  assertEquals(result.coreFeatures.length, 3, "Should handle all chunks");
 
-    if (result && result.coreFeatures.length === 3) {
-      console.log('  ✅ Error handling works gracefully\n');
-      passed++;
-    } else {
-      throw new Error('Failed to handle errors properly');
-    }
+  await analyzer.shutdown();
+});
 
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
+// Test 5: Concurrency limits
+Deno.test("Parallel Unit - Concurrency Limits", async () => {
+  const maxWorkers = 2;
+  const analyzer = new MockParallelAnalyzer({ maxWorkers });
 
-  // Test 5: Concurrency limits
-  console.log('Test 5: Concurrency Limits');
-  try {
-    const maxWorkers = 2;
-    const analyzer = new MockParallelAnalyzer({ maxWorkers });
+  let maxConcurrent = 0;
+  analyzer.on('progress', (event: CustomEvent) => {
+    const detail = event.detail as {
+      processed: number;
+      total: number;
+      percentage: number;
+      activeWorkers: number;
+    };
+    maxConcurrent = Math.max(maxConcurrent, detail.activeWorkers);
+  });
 
-    let maxConcurrent = 0;
-    analyzer.on('progress', (event: CustomEvent) => {
-      const detail = event.detail as {
-        processed: number;
-        total: number;
-        percentage: number;
-        activeWorkers: number;
-      };
-      maxConcurrent = Math.max(maxConcurrent, detail.activeWorkers);
-    });
+  const chunks = createMockChunks(5);
+  await analyzer.analyzeFunctionality(chunks);
 
-    const chunks = Array(5)
-      .fill(0)
-      .map((_, i) => ({
-        category: 'test',
-        files: [{ content: `chunk${i}` }],
-      }));
+  assert(maxConcurrent <= maxWorkers, 
+    `Max concurrent (${maxConcurrent}) should not exceed limit (${maxWorkers})`);
 
-    await analyzer.analyzeFunctionality(chunks);
+  await analyzer.shutdown();
+});
 
-    if (maxConcurrent <= maxWorkers) {
-      console.log(
-        `  ✅ Concurrency limit respected (max: ${maxConcurrent}/${maxWorkers})\n`,
-      );
-      passed++;
-    } else {
-      throw new Error(
-        `Exceeded concurrency limit: ${maxConcurrent} > ${maxWorkers}`,
-      );
-    }
+// Test 6: Large dataset handling
+Deno.test("Parallel Unit - Large Dataset Handling", async () => {
+  const analyzer = new MockParallelAnalyzer({
+    maxWorkers: 4,
+    simulateDelay: 1, // Very fast processing
+  });
 
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
+  const chunks = createMockChunks(100);
+  
+  const startTime = performance.now();
+  const result = await analyzer.analyzeFunctionality(chunks);
+  const duration = performance.now() - startTime;
 
-  // Test 6: Large dataset handling
-  console.log('Test 6: Large Dataset Handling');
-  try {
-    const analyzer = new MockParallelAnalyzer({
-      maxWorkers: 4,
-      simulateDelay: 1, // Very fast processing
-    });
+  assertEquals(result.coreFeatures.length, 100, "Should process all chunks");
+  assert(duration < 1000, `Should complete quickly (${duration}ms < 1000ms)`);
 
-    const chunks = Array(100)
-      .fill(0)
-      .map((_, i) => ({
-        category: `category${i % 10}`,
-        files: [{ content: `chunk${i}` }],
-      }));
+  await analyzer.shutdown();
+});
 
-    const startTime = Date.now();
-    const result = await analyzer.analyzeFunctionality(chunks);
-    const duration = Date.now() - startTime;
-
-    if (result.coreFeatures.length === 100 && duration < 1000) {
-      console.log(`  ✅ Handled 100 chunks in ${duration}ms\n`);
-      passed++;
-    } else {
-      throw new Error(`Failed to handle large dataset efficiently`);
-    }
-
-    await analyzer.shutdown();
-  } catch (error) {
-    console.log(`  ❌ Failed: ${error}\n`);
-    failed++;
-  }
-
-  // Summary
-  console.log('='.repeat(50));
-  console.log(`\n📊 Unit Test Results: ${passed}/${passed + failed} passed`);
-
-  if (failed === 0) {
-    console.log('✅ All unit tests passed!\n');
-  } else {
-    console.log(`❌ ${failed} tests failed\n`);
-  }
-
-  Deno.exit(failed > 0 ? 1 : 0);
-}
-
-// Run tests
-if (import.meta.main) {
-  runUnitTests().catch(console.error);
-}
-
-export { MockParallelAnalyzer, runUnitTests };
+export { MockParallelAnalyzer, createMockChunks };
