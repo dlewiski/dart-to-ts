@@ -1,5 +1,4 @@
 // Deno-compatible imports (replacing Node.js imports)
-import { resolve } from '../../../deps.ts';
 import {
   type AnalysisOptions,
   type CodeChunk,
@@ -10,24 +9,62 @@ import { analyzeFunctionality as sequentialAnalyze } from '../../analyzer.ts';
 /**
  * Custom EventTarget-based event emitter for Deno compatibility
  * Replaces Node.js EventEmitter with Deno-compatible implementation
+ * Uses AbortController pattern for proper listener cleanup
  */
 class DenoEventEmitter extends EventTarget {
-  emit(eventName: string, data?: any): void {
+  private abortController: AbortController;
+  private listenerMap: Map<string, Set<EventListener>>;
+
+  constructor() {
+    super();
+    this.abortController = new AbortController();
+    this.listenerMap = new Map();
+  }
+
+  emit(eventName: string, data?: unknown): void {
     this.dispatchEvent(new CustomEvent(eventName, { detail: data }));
   }
 
   on(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.addEventListener(eventName, listener as EventListener);
+    const wrappedListener = listener as EventListener;
+    
+    // Track the listener
+    if (!this.listenerMap.has(eventName)) {
+      this.listenerMap.set(eventName, new Set());
+    }
+    this.listenerMap.get(eventName)!.add(wrappedListener);
+    
+    // Add with abort signal for cleanup
+    this.addEventListener(eventName, wrappedListener, {
+      signal: this.abortController.signal
+    });
   }
 
   off(eventName: string, listener: (event: CustomEvent) => void): void {
-    this.removeEventListener(eventName, listener as EventListener);
+    const wrappedListener = listener as EventListener;
+    
+    // Remove from tracking
+    const listeners = this.listenerMap.get(eventName);
+    if (listeners) {
+      listeners.delete(wrappedListener);
+      if (listeners.size === 0) {
+        this.listenerMap.delete(eventName);
+      }
+    }
+    
+    this.removeEventListener(eventName, wrappedListener);
   }
 
   removeAllListeners(): void {
-    // Custom implementation to remove all listeners
-    // Note: EventTarget doesn't provide a direct way to remove all listeners
-    // This is a simplified implementation
+    // Abort all listeners at once - this removes all event listeners
+    // that were added with the abort signal
+    this.abortController.abort();
+    
+    // Create a new AbortController for future listeners
+    this.abortController = new AbortController();
+    
+    // Clear the listener map
+    this.listenerMap.clear();
   }
 }
 
@@ -217,15 +254,15 @@ export class ParallelAnalyzer extends DenoEventEmitter {
   /**
    * Resolve the correct worker file path using Deno APIs
    * @private
-   * @returns The resolved worker file path
+   * @returns The resolved worker file URL
    */
   private resolveWorkerPath(): string {
-    const currentDir = new URL('.', import.meta.url).pathname;
-    const workerTsPath = resolve(currentDir, 'worker.ts');
-
-    // In Deno, we prefer TypeScript files and use import.meta.url for module resolution
-    // For now, we'll return the TypeScript path as Deno can handle TS directly
-    return workerTsPath;
+    // Use import.meta.url to get the current module's URL
+    // and resolve the worker.ts file relative to it
+    const workerUrl = new URL('./worker.ts', import.meta.url);
+    
+    // Return the full URL string for the Worker constructor
+    return workerUrl.href;
   }
 
   /**

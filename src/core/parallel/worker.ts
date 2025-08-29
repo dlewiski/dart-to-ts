@@ -4,7 +4,10 @@ import {
   type AnalysisOptions,
   type ChunkAnalysisResult,
   type CodeChunk,
+  type ClaudeOptions,
 } from '../../types/index.ts';
+import { analyzeCode } from '../../claude-cli.ts';
+import { analysisPrompts } from '../../prompts.ts';
 
 /**
  * Message received from the main thread containing work to process
@@ -25,9 +28,8 @@ interface WorkerResult {
 }
 
 /**
- * Analyze a single chunk of code
- * This would normally call analyzeChunkByCategory from the main analyzer
- * but we avoid circular dependencies by implementing core logic here.
+ * Analyze a single chunk of code using Claude API
+ * Implements the core analysis logic from the main analyzer
  *
  * @param chunk The code chunk to analyze
  * @param options Analysis options
@@ -35,22 +37,62 @@ interface WorkerResult {
  */
 async function analyzeChunk(
   chunk: CodeChunk,
-  _options: AnalysisOptions,
+  options: AnalysisOptions,
 ): Promise<ChunkAnalysisResult | null> {
   try {
-    // For now, return a mock result for testing
-    // In production, this would contain actual analysis logic
-    const result: ChunkAnalysisResult = {
-      appPurpose: `Analysis of ${chunk.category} chunk`,
-      initialization: [
-        `Processed ${chunk.files.length} files in ${chunk.category}`,
-      ],
+    // Combine all file contents for analysis
+    const code = chunk.files.map((f) => f.content).join('\n\n');
+    
+    // Convert AnalysisOptions to ClaudeOptions for the API call
+    const claudeOptions: ClaudeOptions = {
+      model: options.model || 'sonnet',
+      verbose: options.verbose || false,
+      timeout: options.timeout || 600000,
     };
+    
+    // Select appropriate prompt based on chunk category
+    let prompt: string;
+    switch (chunk.category) {
+      case 'entry':
+        prompt = analysisPrompts.appFunctionality(code);
+        break;
+      case 'state':
+        prompt = analysisPrompts.stateStructure(code);
+        break;
+      case 'components':
+        prompt = analysisPrompts.componentFunctionality(code);
+        break;
+      case 'services':
+        prompt = analysisPrompts.serviceLayer(code);
+        break;
+      case 'models':
+        prompt = analysisPrompts.businessLogic(code);
+        break;
+      default:
+        // Generic analysis for unknown categories
+        prompt = `Analyze this ${chunk.category} code from a Flutter application.
+${chunk.context ? `Context: ${chunk.context}\n` : ''}
 
-    // Simulate processing time based on chunk size
-    const processingTime = Math.min(100, chunk.files.length * 10);
-    await new Promise((resolve) => setTimeout(resolve, processingTime));
+Please identify:
+1. The main purpose and functionality
+2. Key patterns and architectural decisions
+3. Dependencies and external services used
+4. Business logic and data flow
 
+Code to analyze:
+\`\`\`dart
+${code}
+\`\`\``;
+    }
+    
+    // Call Claude API for analysis
+    const result = await analyzeCode(
+      code,
+      prompt,
+      undefined,
+      claudeOptions,
+    ) as ChunkAnalysisResult;
+    
     return result;
   } catch (error) {
     console.error(`Error analyzing chunk ${chunk.category}:`, error);
@@ -68,11 +110,17 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   try {
     const analysis = await analyzeChunk(chunk, options);
 
-    const response: WorkerResult = {
-      success: true,
-      analysis: analysis || undefined,
-      chunkCategory: chunk.category,
-    };
+    const response: WorkerResult = analysis 
+      ? {
+          success: true,
+          analysis: analysis,
+          chunkCategory: chunk.category,
+        }
+      : {
+          success: false,
+          error: 'Analysis returned null',
+          chunkCategory: chunk.category,
+        };
 
     self.postMessage(response);
   } catch (error) {
