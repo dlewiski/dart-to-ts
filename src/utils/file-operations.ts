@@ -94,10 +94,23 @@ export async function safeWriteJsonFile(
 
 /**
  * Check if path exists synchronously
+ * @deprecated Use pathExistsAsync for better performance
  */
 export function pathExists(filePath: string): boolean {
   try {
     Deno.statSync(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if path exists asynchronously (recommended)
+ */
+export async function pathExistsAsync(filePath: string): Promise<boolean> {
+  try {
+    await Deno.stat(filePath);
     return true;
   } catch {
     return false;

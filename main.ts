@@ -1,7 +1,7 @@
 import { colors, Command, join } from './deps.ts';
 import { AnalysisService } from './src/services/analysis-service.ts';
 import { type CLIOptions, type FunctionalAnalysis } from './src/types/index.ts';
-import { pathExists } from './src/utils/file-operations.ts';
+import { pathExistsAsync } from './src/utils/file-operations.ts';
 
 /**
  * Main analysis function with improved error handling and logging
@@ -53,16 +53,16 @@ function displayCompletionSummary(savedPaths: {
 /**
  * Prepare and validate analysis configuration
  */
-function prepareAnalysisConfig(
+async function prepareAnalysisConfig(
   options: Record<string, unknown>,
   projectPath?: string,
-): { path: string; options: CLIOptions } {
+): Promise<{ path: string; options: CLIOptions }> {
   // Determine analysis path
   const analysisPath = projectPath ||
     join(Deno.cwd(), 'frontend_release_dashboard');
 
   // Validate project path exists
-  if (!pathExists(analysisPath)) {
+  if (!(await pathExistsAsync(analysisPath))) {
     throw new Error(`Project path "${analysisPath}" does not exist.`);
   }
 
@@ -138,7 +138,7 @@ if (import.meta.main) {
     )
     .action(async (options, projectPath?: string) => {
       try {
-        const analysisConfig = prepareAnalysisConfig(
+        const analysisConfig = await prepareAnalysisConfig(
           options,
           projectPath,
         );
