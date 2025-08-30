@@ -1,0 +1,34 @@
+#!/bin/sh
+# Pre-commit hook to automatically format code with deno fmt
+
+echo "📝 Auto-formatting code with deno fmt..."
+
+# Run deno fmt on all files
+deno fmt
+
+# Check if deno fmt made any changes
+if [ $? -eq 0 ]; then
+  # Add any formatted files to the commit
+  git add -A
+  echo "✅ Code formatted successfully"
+else
+  echo "❌ Formatting failed. Please fix errors before committing."
+  exit 1
+fi
+
+# Run format check to ensure everything is properly formatted
+deno fmt --check > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "⚠️  Some files were reformatted. They have been added to your commit."
+fi
+
+# Optional: Run linting as well
+echo "🔍 Running linter..."
+deno lint
+if [ $? -ne 0 ]; then
+  echo "❌ Linting failed. Please fix linting errors before committing."
+  echo "   Run 'deno lint' to see the errors."
+  exit 1
+fi
+
+echo "✅ All checks passed! Proceeding with commit..."

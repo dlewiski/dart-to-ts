@@ -14,7 +14,11 @@
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
     "check": "deno task lint && deno task fmt:check && deno check main.ts",
-    "analyze": "deno run --allow-read --allow-write --allow-env --allow-net main.ts"
+    "analyze": "deno run --allow-read --allow-write --allow-env --allow-net main.ts",
+    "hook:install": "git config core.hooksPath .githooks && echo '✅ Git hooks installed! Formatting will run automatically on commit.'",
+    "hook:uninstall": "git config --unset core.hooksPath && echo '✅ Git hooks uninstalled.'",
+    "precommit": "deno fmt && deno lint && echo '✅ Pre-commit checks passed!'",
+    "commit": "deno task precommit && git add -A && git commit"
   },
 
   "imports": {
