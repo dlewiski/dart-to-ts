@@ -6,7 +6,6 @@
 import { ParallelAnalyzer } from '../src/core/parallel/ParallelAnalyzer.ts';
 import { analyzeFunctionality } from '../src/analyzer.ts';
 import { createRealisticChunks } from './helpers/test-fixtures.ts';
-import { timing } from './helpers/test-runner.ts';
 
 interface PerformanceResult {
   config: string;
@@ -20,7 +19,22 @@ interface PerformanceResult {
   memoryRatio: string;
 }
 
-async function runPerformanceTests() {
+// Helper function to measure execution time
+async function measureTime<T>(
+  fn: () => Promise<T>,
+): Promise<{ result?: T; duration: number }> {
+  const start = performance.now();
+  try {
+    const result = await fn();
+    const duration = Math.round(performance.now() - start);
+    return { result, duration };
+  } catch (_error) {
+    const duration = Math.round(performance.now() - start);
+    return { duration };
+  }
+}
+
+Deno.test('Performance comparison - sequential vs parallel', async () => {
   console.log('⚡ Parallel Processing Performance Tests\n');
   console.log('='.repeat(50) + '\n');
 
@@ -45,16 +59,12 @@ async function runPerformanceTests() {
     console.log('Running sequential analysis...');
     const sequentialMemStart = Deno.memoryUsage().heapUsed;
 
-    const { duration: sequentialTime } = await timing.measure(async () => {
-      try {
-        await analyzeFunctionality(chunks, {
-          useCache: false,
-          timeout: 30000,
-          verbose: false,
-        });
-      } catch (_error) {
-        // Expected in test environment
-      }
+    const { duration: sequentialTime } = await measureTime(async () => {
+      await analyzeFunctionality(chunks, {
+        useCache: false,
+        timeout: 30000,
+        verbose: false,
+      });
     });
 
     const sequentialMemUsed =
@@ -70,16 +80,12 @@ async function runPerformanceTests() {
       verbose: false,
     });
 
-    const { duration: parallelTime } = await timing.measure(async () => {
-      try {
-        await parallelAnalyzer.analyzeFunctionality(chunks);
-      } catch (_error) {
-        // Expected in test environment
-      }
+    const { duration: parallelTime } = await measureTime(async () => {
+      await parallelAnalyzer.analyzeFunctionality(chunks);
     });
 
-    const parallelMemUsed =
-      (Deno.memoryUsage().heapUsed - parallelMemStart) / 1024 / 1024;
+    const parallelMemUsed = (Deno.memoryUsage().heapUsed - parallelMemStart) /
+      1024 / 1024;
 
     await parallelAnalyzer.shutdown();
 
@@ -105,17 +111,17 @@ async function runPerformanceTests() {
     // Display results
     console.log('\nResults:');
     console.log(
-      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`
+      `  Sequential: ${sequentialTime}ms (${sequentialMemUsed.toFixed(1)}MB)`,
     );
     console.log(
-      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`
+      `  Parallel:   ${parallelTime}ms (${parallelMemUsed.toFixed(1)}MB)`,
     );
     console.log(`  Speedup:    ${speedup.toFixed(2)}x`);
     console.log(`  Memory:     ${memoryRatio.toFixed(2)}x`);
 
     if (speedup > 1) {
       console.log(
-        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`
+        `  ✅ Parallel is ${((speedup - 1) * 100).toFixed(0)}% faster`,
       );
     } else {
       console.log(`  ⚠️  No speedup achieved`);
@@ -132,7 +138,7 @@ async function runPerformanceTests() {
       'Parallel (ms)': r.parallelTime,
       Speedup: `${r.speedup}x`,
       'Memory Ratio': `${r.memoryRatio}x`,
-    }))
+    })),
   );
 
   // Overall assessment
@@ -151,14 +157,4 @@ async function runPerformanceTests() {
   }
 
   console.log('\n' + '='.repeat(50) + '\n');
-}
-
-// Run if executed directly
-if (import.meta.main) {
-  runPerformanceTests().catch((error) => {
-    console.error('Fatal error:', error);
-    Deno.exit(1);
-  });
-}
-
-export { runPerformanceTests };
+});

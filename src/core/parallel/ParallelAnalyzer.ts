@@ -27,22 +27,22 @@ class DenoEventEmitter extends EventTarget {
 
   on(eventName: string, listener: (event: CustomEvent) => void): void {
     const wrappedListener = listener as EventListener;
-    
+
     // Track the listener
     if (!this.listenerMap.has(eventName)) {
       this.listenerMap.set(eventName, new Set());
     }
     this.listenerMap.get(eventName)!.add(wrappedListener);
-    
+
     // Add with abort signal for cleanup
     this.addEventListener(eventName, wrappedListener, {
-      signal: this.abortController.signal
+      signal: this.abortController.signal,
     });
   }
 
   off(eventName: string, listener: (event: CustomEvent) => void): void {
     const wrappedListener = listener as EventListener;
-    
+
     // Remove from tracking
     const listeners = this.listenerMap.get(eventName);
     if (listeners) {
@@ -51,7 +51,7 @@ class DenoEventEmitter extends EventTarget {
         this.listenerMap.delete(eventName);
       }
     }
-    
+
     this.removeEventListener(eventName, wrappedListener);
   }
 
@@ -59,10 +59,10 @@ class DenoEventEmitter extends EventTarget {
     // Abort all listeners at once - this removes all event listeners
     // that were added with the abort signal
     this.abortController.abort();
-    
+
     // Create a new AbortController for future listeners
     this.abortController = new AbortController();
-    
+
     // Clear the listener map
     this.listenerMap.clear();
   }
@@ -93,7 +93,7 @@ export interface ParallelOptions extends AnalysisOptions {
  */
 interface WorkItem {
   chunk: CodeChunk;
-  resolve: (value: Partial<FunctionalAnalysis>) => void;
+  resolve: (value: unknown) => void;
   reject: (error: Error) => void;
 }
 
@@ -144,7 +144,8 @@ export class ParallelAnalyzer extends DenoEventEmitter {
   constructor(options: ParallelOptions = {}) {
     super();
     this.options = {
-      maxWorkers: options.maxWorkers || Math.min(4, navigator.hardwareConcurrency || 4),
+      maxWorkers: options.maxWorkers ||
+        Math.min(4, navigator.hardwareConcurrency || 4),
       maxMemory: options.maxMemory || 512 * 1024 * 1024, // 512MB default
       streaming: options.streaming || false,
       chunkSize: options.chunkSize || 1024 * 1024, // 1MB default
@@ -176,10 +177,18 @@ export class ParallelAnalyzer extends DenoEventEmitter {
    * @param workerPath Path to the worker script
    */
   private createWorker(workerPath: string): void {
-    const worker = new Worker(workerPath, { 
-      type: "module", 
+    const worker = new Worker(workerPath, {
+      type: 'module',
       // @ts-ignore - Deno-specific Worker option
-      deno: { permissions: { read: true, write: true } } 
+      deno: {
+        permissions: {
+          read: true,
+          write: true,
+          run: ['claude'], // Allow running claude CLI
+          env: true, // Allow reading environment variables for Claude API
+          net: false, // Don't need network access, claude CLI handles that
+        },
+      },
     });
     this.availableWorkers.push(worker);
 
@@ -260,7 +269,7 @@ export class ParallelAnalyzer extends DenoEventEmitter {
     // Use import.meta.url to get the current module's URL
     // and resolve the worker.ts file relative to it
     const workerUrl = new URL('./worker.ts', import.meta.url);
-    
+
     // Return the full URL string for the Worker constructor
     return workerUrl.href;
   }
@@ -271,7 +280,7 @@ export class ParallelAnalyzer extends DenoEventEmitter {
    * @param worker The worker that completed the task
    * @param result The result from the worker
    */
-  private handleWorkerResult(worker: Worker, result: any): void {
+  private handleWorkerResult(worker: Worker, result: unknown): void {
     // Update health tracking
     const health = this.workerHealth.get(worker);
     if (health) {
@@ -285,7 +294,8 @@ export class ParallelAnalyzer extends DenoEventEmitter {
     this.emitProgress();
 
     // Process result and merge into analysis
-    if (result.success) {
+    const workerResult = result as { success?: boolean };
+    if (workerResult.success) {
       this.emit('chunkComplete', result);
     } else {
       this.emit('chunkError', result);
@@ -347,7 +357,7 @@ export class ParallelAnalyzer extends DenoEventEmitter {
    */
   private assignWorkToWorker(
     chunk: CodeChunk,
-    resolve: (value: any) => void,
+    resolve: (value: unknown) => void,
     reject: (error: Error) => void,
   ): void {
     // Apply backpressure if necessary
@@ -397,7 +407,7 @@ export class ParallelAnalyzer extends DenoEventEmitter {
    * @param chunks Array of code chunks to analyze
    * @returns Promise resolving to the functional analysis results
    */
-  async analyzeFunctionality(chunks: CodeChunk[]): Promise<FunctionalAnalysis> {
+  analyzeFunctionality(chunks: CodeChunk[]): Promise<FunctionalAnalysis> {
     this.totalChunks = chunks.length;
     this.processedChunks = 0;
 

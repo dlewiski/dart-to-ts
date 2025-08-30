@@ -14,26 +14,30 @@ export function createMockChunks(
     contentSize?: 'small' | 'medium' | 'large';
     triggerError?: boolean;
     errorIndex?: number;
-  } = {}
+  } = {},
 ): CodeChunk[] {
   const {
     category = (i: number) => i % 2 === 0 ? 'components' : 'services',
     contentSize = 'small',
     triggerError = false,
-    errorIndex = 1
+    errorIndex = 1,
   } = options;
 
   return Array.from({ length: count }, (_, i) => {
-    const categoryName = typeof category === 'function' ? category(i) : category;
+    const categoryName = typeof category === 'function'
+      ? category(i)
+      : category;
     const shouldTriggerError = triggerError && i === errorIndex;
-    
+
     return {
       category: categoryName,
       files: [{
         path: `test_${categoryName}_${i}.dart`,
-        content: shouldTriggerError ? 'TRIGGER_ERROR' : generateMockContent(i, contentSize, categoryName)
+        content: shouldTriggerError
+          ? 'TRIGGER_ERROR'
+          : generateMockContent(i, contentSize, categoryName),
       }],
-      context: `Test chunk ${i} for ${categoryName}`
+      context: `Test chunk ${i} for ${categoryName}`,
     };
   });
 }
@@ -44,7 +48,7 @@ export function createMockChunks(
 function generateMockContent(
   index: number,
   size: 'small' | 'medium' | 'large',
-  category: string
+  category: string,
 ): string {
   const baseContent = `
 class ${category}Class${index} {
@@ -103,7 +107,8 @@ class ${category}Widget${index} extends StatelessWidget {
   return flutterContent + `
 
   // Additional methods for large content test
-  ${Array.from({ length: 10 }, (_, i) => `
+  ${
+    Array.from({ length: 10 }, (_, i) => `
   void additionalMethod${i}() {
     // Simulate complex business logic
     final complexData = List.generate(100, (i) => 'item_\$i');
@@ -111,7 +116,8 @@ class ${category}Widget${index} extends StatelessWidget {
       processData(item);
     });
   }
-  `).join('\n')}
+  `).join('\n')
+  }
   
   /* ${'Large comment block '.repeat(50)} */
 `;
@@ -120,25 +126,27 @@ class ${category}Widget${index} extends StatelessWidget {
 /**
  * Creates realistic Flutter/Dart project chunks by category
  */
-export function createRealisticChunks(categories: string[] = ['components', 'services', 'state', 'utils']): CodeChunk[] {
+export function createRealisticChunks(
+  categories: string[] = ['components', 'services', 'state', 'utils'],
+): CodeChunk[] {
   const chunks: CodeChunk[] = [];
-  
+
   categories.forEach((category, catIndex) => {
     // Add 2-3 files per category
     const fileCount = 2 + (catIndex % 2);
-    
+
     for (let i = 0; i < fileCount; i++) {
       chunks.push({
         category,
         files: [{
           path: `lib/src/${category}/file_${catIndex}_${i}.dart`,
-          content: generateRealisticContent(category, i)
+          content: generateRealisticContent(category, i),
         }],
-        context: `Realistic ${category} chunk ${i}`
+        context: `Realistic ${category} chunk ${i}`,
       });
     }
   });
-  
+
   return chunks;
 }
 
@@ -186,7 +194,7 @@ class _Custom${category}${index}State extends State<Custom${category}${index}> {
     setState(() => _isLoading = false);
   }
 }`,
-    
+
     services: `
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -229,7 +237,7 @@ class ${category}Service${index} {
     }
   }
 }`,
-    
+
     state: `
 import 'package:flutter/foundation.dart';
 
@@ -277,7 +285,7 @@ class ${category}Manager${index} extends ChangeNotifier {
     notifyListeners();
   }
 }`,
-    
+
     utils: `
 class ${category}Helper${index} {
   static String formatDate(DateTime date) {
@@ -304,8 +312,8 @@ class ${category}Helper${index} {
     if (text.length <= maxLength) return text;
     return '\${text.substring(0, maxLength)}...';
   }
-}`
+}`,
   };
-  
-  return templates[category] ?? templates['utils']!
+
+  return templates[category] ?? templates['utils']!;
 }

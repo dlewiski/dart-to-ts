@@ -6,12 +6,15 @@ import { AnalysisService } from './services/analysis-service.ts';
 
 /**
  * Analyze a Dart/Flutter application programmatically
- * 
+ *
  * @param projectPath Path to the Dart project directory
  * @param options Analysis options
  * @returns The functional analysis result
  */
-export async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
+export async function analyzeDartApp(
+  projectPath: string,
+  options: CLIOptions = {},
+) {
   const analysisService = new AnalysisService(projectPath);
 
   // Execute analysis workflow

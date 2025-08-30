@@ -6,7 +6,7 @@ import { type CodeChunk } from '../../src/types/index.ts';
 
 // Deno-compatible EventEmitter implementation
 export class DenoEventEmitter extends EventTarget {
-  emit(eventName: string, data?: any): void {
+  emit(eventName: string, data?: unknown): void {
     this.dispatchEvent(new CustomEvent(eventName, { detail: data }));
   }
 
@@ -53,8 +53,16 @@ export class MockParallelAnalyzer extends DenoEventEmitter {
     appPurpose: string;
     coreFeatures: string[];
     stateManagement: { pattern: string };
-    dataFlow: { sources: unknown[]; transformations: unknown[]; destinations: unknown[] };
-    businessLogic: { rules: unknown[]; validations: unknown[]; calculations: unknown[] };
+    dataFlow: {
+      sources: unknown[];
+      transformations: unknown[];
+      destinations: unknown[];
+    };
+    businessLogic: {
+      rules: unknown[];
+      validations: unknown[];
+      calculations: unknown[];
+    };
     dependencies: { dart: unknown[]; tsEquivalents: Record<string, unknown> };
   }> {
     this.totalChunks = chunks.length;
@@ -126,7 +134,7 @@ export class MockParallelAnalyzer extends DenoEventEmitter {
     return this.processedChunks;
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): void {
     // Clean up mock resources
     this.activeWorkers = 0;
     this.processedChunks = 0;
@@ -142,7 +150,6 @@ export function createTestWorkerCode(): string {
   return `
     self.addEventListener('message', (event) => {
       const { data } = event;
-      console.log('Worker received:', data.message);
       
       // Simulate some processing
       setTimeout(() => {
@@ -159,9 +166,9 @@ export function createTestWorkerCode(): string {
 /**
  * Creates a test worker with Deno permissions
  */
-export async function createTestWorker(
-  workerCode: string = createTestWorkerCode()
-): Promise<{ worker: Worker; url: string }> {
+export function createTestWorker(
+  workerCode: string = createTestWorkerCode(),
+): { worker: Worker; url: string } {
   const blob = new Blob([workerCode], { type: 'application/javascript' });
   const workerUrl = URL.createObjectURL(blob);
 
@@ -173,9 +180,9 @@ export async function createTestWorker(
         read: false,
         write: false,
         net: false,
-        run: false
-      }
-    }
+        run: false,
+      },
+    },
   });
 
   return { worker, url: workerUrl };

@@ -10,19 +10,13 @@ This directory contains the refactored test suite for the parallel processing fu
 - **`parallel-integration.test.ts`** - Integration tests with the actual ParallelAnalyzer
 - **`parallel-performance.test.ts`** - Performance benchmarks comparing parallel vs sequential
 - **`worker-mechanism.test.ts`** - Tests for web worker infrastructure
-- **`run-all-tests.ts`** - Main test runner that executes all test suites
+- **`claude-integration.test.ts`** - Integration tests for Claude CLI
 
 ### Shared Test Utilities (`helpers/`)
 
 - **`test-fixtures.ts`** - Reusable mock data and chunk generators
   - `createMockChunks()` - Generate simple test chunks
   - `createRealisticChunks()` - Generate realistic Flutter/Dart code chunks
-  
-- **`test-runner.ts`** - Common test execution framework
-  - `runTestSuite()` - Execute a suite of tests with error handling
-  - `assert` - Assertion utilities (ok, equal, greaterThan, etc.)
-  - `timing` - Timing utilities (measure, delay, timeout)
-  - `trackProgressEvents()` - Progress event tracking helper
 
 - **`mock-analyzer.ts`** - Mock implementations for unit testing
   - `MockParallelAnalyzer` - Mock analyzer for isolated testing
@@ -32,6 +26,7 @@ This directory contains the refactored test suite for the parallel processing fu
 ## Running Tests
 
 ### Run All Tests
+
 ```bash
 # Run all test suites
 deno run --allow-all test/run-all-tests.ts
@@ -44,6 +39,7 @@ deno run --allow-all test/run-all-tests.ts
 ```
 
 ### Run Individual Test Suites
+
 ```bash
 # Unit tests only
 deno run --allow-all test/parallel-unit.test.ts
@@ -61,6 +57,7 @@ deno run --allow-all test/parallel-performance.test.ts
 ## Test Coverage
 
 ### Unit Tests
+
 - Basic functionality
 - Parallel execution timing
 - Progress event emission
@@ -69,6 +66,7 @@ deno run --allow-all test/parallel-performance.test.ts
 - Large dataset handling
 
 ### Integration Tests
+
 - Real ParallelAnalyzer functionality
 - Progress tracking with actual implementation
 - Error resilience in production code
@@ -77,6 +75,7 @@ deno run --allow-all test/parallel-performance.test.ts
 - Realistic content processing
 
 ### Worker Mechanism Tests
+
 - Worker creation and termination
 - Message communication
 - Multiple worker instances
@@ -84,6 +83,7 @@ deno run --allow-all test/parallel-performance.test.ts
 - Performance characteristics
 
 ### Performance Tests
+
 - Sequential vs parallel comparison
 - Speedup measurements
 - Memory usage tracking
@@ -125,18 +125,15 @@ When adding new tests:
    - Worker tests → `worker-mechanism.test.ts`
 
 Example:
+
 ```typescript
 import { createMockChunks } from './helpers/test-fixtures.ts';
-import { runTestSuite, assert } from './helpers/test-runner.ts';
+import { assert } from '@std/assert';
 
-await runTestSuite('My New Tests', [
-  {
-    name: 'Test Name',
-    fn: async () => {
-      // Test implementation
-      assert.ok(result, 'Should work');
-    },
-    timeout: 5000 // Optional timeout
-  }
-]);
+Deno.test('Test Name', async () => {
+  // Test implementation
+  const chunks = createMockChunks(3);
+  const result = await processChunks(chunks);
+  assert(result, 'Should work');
+});
 ```

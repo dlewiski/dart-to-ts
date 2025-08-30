@@ -3,8 +3,8 @@
 import {
   type AnalysisOptions,
   type ChunkAnalysisResult,
-  type CodeChunk,
   type ClaudeOptions,
+  type CodeChunk,
 } from '../../types/index.ts';
 import { analyzeCode } from '../../claude-cli.ts';
 import { analysisPrompts } from '../../prompts.ts';
@@ -42,14 +42,14 @@ async function analyzeChunk(
   try {
     // Combine all file contents for analysis
     const code = chunk.files.map((f) => f.content).join('\n\n');
-    
+
     // Convert AnalysisOptions to ClaudeOptions for the API call
     const claudeOptions: ClaudeOptions = {
       model: options.model || 'sonnet',
       verbose: options.verbose || false,
       timeout: options.timeout || 600000,
     };
-    
+
     // Select appropriate prompt based on chunk category
     let prompt: string;
     switch (chunk.category) {
@@ -70,7 +70,8 @@ async function analyzeChunk(
         break;
       default:
         // Generic analysis for unknown categories
-        prompt = `Analyze this ${chunk.category} code from a Flutter application.
+        prompt =
+          `Analyze this ${chunk.category} code from a Flutter application.
 ${chunk.context ? `Context: ${chunk.context}\n` : ''}
 
 Please identify:
@@ -84,7 +85,7 @@ Code to analyze:
 ${code}
 \`\`\``;
     }
-    
+
     // Call Claude API for analysis
     const result = await analyzeCode(
       code,
@@ -92,7 +93,7 @@ ${code}
       undefined,
       claudeOptions,
     ) as ChunkAnalysisResult;
-    
+
     return result;
   } catch (error) {
     console.error(`Error analyzing chunk ${chunk.category}:`, error);
@@ -110,17 +111,17 @@ self.addEventListener('message', async (event: MessageEvent<WorkerMessage>) => {
   try {
     const analysis = await analyzeChunk(chunk, options);
 
-    const response: WorkerResult = analysis 
+    const response: WorkerResult = analysis
       ? {
-          success: true,
-          analysis: analysis,
-          chunkCategory: chunk.category,
-        }
+        success: true,
+        analysis: analysis,
+        chunkCategory: chunk.category,
+      }
       : {
-          success: false,
-          error: 'Analysis returned null',
-          chunkCategory: chunk.category,
-        };
+        success: false,
+        error: 'Analysis returned null',
+        chunkCategory: chunk.category,
+      };
 
     self.postMessage(response);
   } catch (error) {
@@ -155,7 +156,9 @@ self.addEventListener('unhandledrejection', (event) => {
   console.error('Worker unhandled rejection:', event.reason);
   const response: WorkerResult = {
     success: false,
-    error: event.reason instanceof Error ? event.reason.message : String(event.reason),
+    error: event.reason instanceof Error
+      ? event.reason.message
+      : String(event.reason),
     chunkCategory: 'unknown',
   };
 

@@ -3,7 +3,12 @@
  * Uses mocks to test core functionality quickly
  */
 
-import { assertEquals, assertExists, assert } from "https://deno.land/std@0.208.0/assert/mod.ts";
+import {
+  assert,
+  assertEquals,
+  assertExists,
+} from 'https://deno.land/std@0.208.0/assert/mod.ts';
+import { createMockChunks } from './helpers/test-fixtures.ts';
 
 // Deno-compatible EventEmitter implementation for testing
 class DenoEventEmitter extends EventTarget {
@@ -22,20 +27,20 @@ class DenoEventEmitter extends EventTarget {
 
   on(eventName: string, listener: (event: CustomEvent) => void): void {
     const wrappedListener = listener as EventListener;
-    
+
     if (!this.listenerMap.has(eventName)) {
       this.listenerMap.set(eventName, new Set());
     }
     this.listenerMap.get(eventName)!.add(wrappedListener);
-    
+
     this.addEventListener(eventName, wrappedListener, {
-      signal: this.abortController.signal
+      signal: this.abortController.signal,
     });
   }
 
   off(eventName: string, listener: (event: CustomEvent) => void): void {
     const wrappedListener = listener as EventListener;
-    
+
     const listeners = this.listenerMap.get(eventName);
     if (listeners) {
       listeners.delete(wrappedListener);
@@ -43,7 +48,7 @@ class DenoEventEmitter extends EventTarget {
         this.listenerMap.delete(eventName);
       }
     }
-    
+
     this.removeEventListener(eventName, wrappedListener);
   }
 
@@ -74,15 +79,25 @@ class MockParallelAnalyzer extends DenoEventEmitter {
     this.simulateDelay = options.simulateDelay || 10; // ms
   }
 
-  async analyzeFunctionality(chunks: Array<{
-    category: string;
-    files: Array<{ content: string }>;
-  }>): Promise<{
+  async analyzeFunctionality(
+    chunks: Array<{
+      category: string;
+      files: Array<{ content: string }>;
+    }>,
+  ): Promise<{
     appPurpose: string;
     coreFeatures: string[];
     stateManagement: { pattern: string };
-    dataFlow: { sources: unknown[]; transformations: unknown[]; destinations: unknown[] };
-    businessLogic: { rules: unknown[]; validations: unknown[]; calculations: unknown[] };
+    dataFlow: {
+      sources: unknown[];
+      transformations: unknown[];
+      destinations: unknown[];
+    };
+    businessLogic: {
+      rules: unknown[];
+      validations: unknown[];
+      calculations: unknown[];
+    };
     dependencies: { dart: unknown[]; tsEquivalents: Record<string, unknown> };
   }> {
     this.totalChunks = chunks.length;
@@ -143,56 +158,50 @@ class MockParallelAnalyzer extends DenoEventEmitter {
     });
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): void {
     // Clean up mock resources
     this.removeAllListeners();
   }
 }
 
-// Helper to create mock chunks
-function createMockChunks(count: number) {
-  return Array.from({ length: count }, (_, i) => ({
-    category: i % 2 === 0 ? 'components' : 'services',
-    files: [{ content: `test content ${i}` }],
-  }));
-}
-
 // Test 1: Basic functionality
-Deno.test("Parallel Unit - Basic Functionality", async () => {
+Deno.test('Parallel Unit - Basic Functionality', async () => {
   const analyzer = new MockParallelAnalyzer({ maxWorkers: 2 });
   const chunks = createMockChunks(2);
 
   const result = await analyzer.analyzeFunctionality(chunks);
 
-  assertExists(result.appPurpose, "Should have app purpose");
-  assertEquals(result.coreFeatures.length, 2, "Should analyze all chunks");
+  assertExists(result.appPurpose, 'Should have app purpose');
+  assertEquals(result.coreFeatures.length, 2, 'Should analyze all chunks');
 
   await analyzer.shutdown();
 });
 
 // Test 2: Parallel execution timing
-Deno.test("Parallel Unit - Parallel Execution Timing", async () => {
+Deno.test('Parallel Unit - Parallel Execution Timing', async () => {
   const analyzer = new MockParallelAnalyzer({
     maxWorkers: 3,
     simulateDelay: 100, // 100ms per chunk
   });
 
   const chunks = createMockChunks(6);
-  
+
   const startTime = performance.now();
   await analyzer.analyzeFunctionality(chunks);
   const duration = performance.now() - startTime;
 
   // With 3 workers and 6 chunks at 100ms each:
   // Sequential would take 600ms, parallel should take ~200ms (2 batches)
-  assert(duration >= 150 && duration <= 350, 
-    `Expected duration between 150-350ms, got ${duration}ms`);
+  assert(
+    duration >= 150 && duration <= 350,
+    `Expected duration between 150-350ms, got ${duration}ms`,
+  );
 
   await analyzer.shutdown();
 });
 
 // Test 3: Progress events
-Deno.test("Parallel Unit - Progress Events", async () => {
+Deno.test('Parallel Unit - Progress Events', async () => {
   const analyzer = new MockParallelAnalyzer({ maxWorkers: 1 });
   const progressEvents: Array<{
     processed: number;
@@ -215,18 +224,18 @@ Deno.test("Parallel Unit - Progress Events", async () => {
     { category: 'test', files: [{ content: 'test' }] },
   ]);
 
-  assert(progressEvents.length > 0, "Should emit progress events");
-  
+  assert(progressEvents.length > 0, 'Should emit progress events');
+
   const lastEvent = progressEvents[progressEvents.length - 1];
-  assertExists(lastEvent, "Should have last event");
-  assertEquals(lastEvent.percentage, 100, "Should complete at 100%");
-  assertEquals(lastEvent.processed, 1, "Should process 1 chunk");
+  assertExists(lastEvent, 'Should have last event');
+  assertEquals(lastEvent.percentage, 100, 'Should complete at 100%');
+  assertEquals(lastEvent.processed, 1, 'Should process 1 chunk');
 
   await analyzer.shutdown();
 });
 
 // Test 4: Error handling
-Deno.test("Parallel Unit - Error Handling", async () => {
+Deno.test('Parallel Unit - Error Handling', async () => {
   const analyzer = new MockParallelAnalyzer({
     maxWorkers: 2,
     simulateErrors: true,
@@ -240,14 +249,14 @@ Deno.test("Parallel Unit - Error Handling", async () => {
 
   const result = await analyzer.analyzeFunctionality(chunks);
 
-  assertExists(result, "Should return result despite errors");
-  assertEquals(result.coreFeatures.length, 3, "Should handle all chunks");
+  assertExists(result, 'Should return result despite errors');
+  assertEquals(result.coreFeatures.length, 3, 'Should handle all chunks');
 
   await analyzer.shutdown();
 });
 
 // Test 5: Concurrency limits
-Deno.test("Parallel Unit - Concurrency Limits", async () => {
+Deno.test('Parallel Unit - Concurrency Limits', async () => {
   const maxWorkers = 2;
   const analyzer = new MockParallelAnalyzer({ maxWorkers });
 
@@ -265,29 +274,31 @@ Deno.test("Parallel Unit - Concurrency Limits", async () => {
   const chunks = createMockChunks(5);
   await analyzer.analyzeFunctionality(chunks);
 
-  assert(maxConcurrent <= maxWorkers, 
-    `Max concurrent (${maxConcurrent}) should not exceed limit (${maxWorkers})`);
+  assert(
+    maxConcurrent <= maxWorkers,
+    `Max concurrent (${maxConcurrent}) should not exceed limit (${maxWorkers})`,
+  );
 
   await analyzer.shutdown();
 });
 
 // Test 6: Large dataset handling
-Deno.test("Parallel Unit - Large Dataset Handling", async () => {
+Deno.test('Parallel Unit - Large Dataset Handling', async () => {
   const analyzer = new MockParallelAnalyzer({
     maxWorkers: 4,
     simulateDelay: 1, // Very fast processing
   });
 
   const chunks = createMockChunks(100);
-  
+
   const startTime = performance.now();
   const result = await analyzer.analyzeFunctionality(chunks);
   const duration = performance.now() - startTime;
 
-  assertEquals(result.coreFeatures.length, 100, "Should process all chunks");
+  assertEquals(result.coreFeatures.length, 100, 'Should process all chunks');
   assert(duration < 1000, `Should complete quickly (${duration}ms < 1000ms)`);
 
   await analyzer.shutdown();
 });
 
-export { MockParallelAnalyzer, createMockChunks };
+export { MockParallelAnalyzer };
