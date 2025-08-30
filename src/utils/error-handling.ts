@@ -51,7 +51,7 @@ export function logWarning(message: string, context: ErrorContext): void {
 export async function withErrorHandling<T>(
   operation: () => Promise<T>,
   context: ErrorContext,
-  fallback?: T
+  fallback?: T,
 ): Promise<T | null> {
   try {
     return await operation();
@@ -66,7 +66,7 @@ export async function withErrorHandling<T>(
  */
 export function createOperationError(
   operation: string,
-  cause?: unknown
+  cause?: unknown,
 ): Error {
   const causeMessage = cause instanceof Error ? cause.message : String(cause);
   return new Error(`${operation}: ${causeMessage}`);

@@ -1,422 +1,278 @@
-# Dart to TypeScript Web Transpiler v2
+# Dart to TypeScript Analyzer - Deno Edition
 
-A sophisticated analyzer and converter specifically designed for **Dart web applications and services** to TypeScript. This tool intelligently analyzes Dart web codebases and provides comprehensive insights for TypeScript conversion, supporting modern Dart web development patterns including dart:html, web services, and server-side Dart applications.
+A modern Deno application that analyzes Dart Flutter/web applications and provides comprehensive insights for TypeScript conversion planning. Built with TypeScript, Deno's secure runtime, and Claude AI for intelligent code analysis.
 
-**⚠️ Important**: This tool is specifically designed for Dart web applications and services only. It does **not** support Flutter mobile/desktop applications.
+## 🚀 Features
 
-## 🌐 Web-Focused Features
+- **Comprehensive Code Analysis**: Scans and categorizes Dart project structure
+- **AI-Powered Understanding**: Uses Claude AI to analyze code functionality
+- **Structured Output**: Generates organized JSON analysis and Markdown reports
+- **Efficient Caching**: Reduces redundant API calls with intelligent response caching
+- **TypeScript-Ready**: Built with TypeScript and modern Deno best practices
+- **Zero Configuration**: No build step, no package.json, just run
 
-- **Dart Web App Analysis**: Deep understanding of dart:html, DOM manipulation, and web-specific APIs
-- **Service Layer Conversion**: REST APIs, HTTP services, and server-side Dart applications
-- **State Management Transpilation**: Redux patterns, state management, and data flow analysis
-- **Web Component Analysis**: Over_React components and web UI patterns
-- **Dependency Mapping**: Intelligent mapping of Dart web packages to TypeScript equivalents
-- **Build System Integration**: Analysis of web compilation and bundling requirements
+## Prerequisites
 
-## 📦 Installation
+- [Deno](https://deno.com/) 2.0 or higher
+- [Claude CLI](https://github.com/anthropics/claude-cli) installed and configured
+- A Dart Flutter/web project to analyze
 
-### Prerequisites
+## Installation
 
-- **Node.js 18+** and **pnpm** for the TypeScript analyzer
-- **Dart SDK 2.11+** for analyzing Dart web projects
-- **Claude CLI** for AI-powered code analysis
-
-### Install Dependencies
+No installation needed! Deno will automatically download dependencies on first run.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/dart-to-ts-v2.git
-cd dart-to-ts-v2
+git clone https://github.com/yourusername/dart-to-ts-analyzer
+cd dart-to-ts-analyzer
 
-# Install TypeScript analyzer dependencies
-pnpm install
-
-# Build the analyzer
-pnpm build
+# Run the analyzer (dependencies auto-install)
+deno task start [path-to-dart-project]
 ```
 
-### Install Claude CLI (Required)
+## 🎯 Quick Start
 
-This tool requires Claude CLI for intelligent code analysis:
+### Basic Analysis
 
 ```bash
-# Install Claude CLI (follow official Anthropic documentation)
-# Ensure 'claude' command is available in your PATH
+# Analyze a Dart project (defaults to ./frontend_release_dashboard)
+deno task start
+
+# Analyze a specific project
+deno task start /path/to/dart/project
+
+# Run with comprehensive analysis (slower but more thorough)
+deno task start /path/to/dart/project --comprehensive
 ```
 
-## 🚀 Quick Start
+### CLI Options
 
-### Analyze a Dart Web Project
+- `-c, --comprehensive`: Use comprehensive analysis mode
+- `-m, --model <model>`: Choose Claude model: `sonnet` (default) or `opus`
+- `-v, --verbose`: Show detailed progress and API usage
+- `--no-cache`: Don't use cached responses
+- `-t, --timeout <seconds>`: Set timeout for analysis (default: 600)
+
+### Development Commands
 
 ```bash
-# Analyze the included sample dashboard
-pnpm analyze
+# Run with file watching (auto-restart on changes)
+deno task dev [path-to-dart-project]
 
-# Analyze a custom Dart web project
-pnpm build && node dist/src/index.js /path/to/your/dart/web/project
+# Run tests
+deno task test
 
-# Run with comprehensive analysis (slower, more detailed)
-pnpm build && node dist/src/index.js /path/to/dart/project --comprehensive
+# Run tests with file watching
+deno task test:watch
 
-# Use verbose output for debugging
-pnpm build && node dist/src/index.js /path/to/dart/project --verbose
+# Lint the code
+deno task lint
+
+# Format the code
+deno task fmt
+
+# Type check and verify code quality
+deno task check
+
+# Direct execution with custom permissions
+deno run --allow-read --allow-write --allow-env --allow-net --allow-run main.ts
 ```
 
-### Example: Analyzing a Dart Web Service
+## 📦 Project Structure
 
-```dart
-// Example Dart web service that the analyzer can process
-import 'dart:html' as html;
-import 'dart:convert';
-import 'package:w_transport/w_transport.dart' as transport;
-
-class ApiService {
-  static const String baseUrl = 'https://api.example.com';
-  
-  Future<Map<String, dynamic>> fetchUserData(String userId) async {
-    final request = transport.Http.get()
-      ..uri = Uri.parse('$baseUrl/users/$userId')
-      ..headers = {'Content-Type': 'application/json'};
-    
-    final response = await request.send();
-    return json.decode(response.body.asString());
-  }
-  
-  void updateDOM(Map<String, dynamic> userData) {
-    final userElement = html.querySelector('#user-info');
-    if (userElement != null) {
-      userElement.text = 'Welcome, ${userData['name']}!';
-    }
-  }
-}
+```
+├── main.ts                 # Entry point and CLI setup
+├── deps.ts                 # Centralized dependencies (Deno convention)
+├── deno.json              # Deno configuration and tasks
+├── src/
+│   ├── analyzer.ts        # Core analysis logic
+│   ├── scanner.ts         # Dart project scanner
+│   ├── extractor.ts       # Code extraction utilities
+│   ├── prompts.ts         # Claude AI prompts
+│   ├── claude-cli.ts      # Claude CLI integration (Deno subprocess)
+│   ├── services/
+│   │   └── analysis-service.ts  # Analysis orchestration
+│   ├── types/
+│   │   ├── index.ts       # Type definitions
+│   │   ├── analysis.ts    # Analysis-specific types
+│   │   └── claude.ts      # Claude API types
+│   └── utils/
+│       ├── file-operations.ts  # Deno file system utilities
+│       ├── error-handling.ts   # Error handling utilities
+│       └── claude-utils.ts     # Claude-specific utilities
+├── test/
+│   └── claude-integration.test.ts  # Integration tests
+└── analysis/              # Generated analysis output
+    ├── raw/              # Raw categorization data
+    ├── functional/       # Functional analysis JSON
+    └── report.md         # Human-readable report
 ```
 
-The analyzer will identify web-specific patterns and suggest TypeScript equivalents:
+## 🔒 Permissions
 
-```typescript
-// Generated TypeScript equivalent suggestions
-import axios from 'axios';
+This application requires the following Deno permissions:
 
-class ApiService {
-  private static readonly baseUrl = 'https://api.example.com';
-  
-  async fetchUserData(userId: string): Promise<Record<string, any>> {
-    const response = await axios.get(`${ApiService.baseUrl}/users/${userId}`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
-    return response.data;
-  }
-  
-  updateDOM(userData: Record<string, any>): void {
-    const userElement = document.querySelector('#user-info');
-    if (userElement) {
-      userElement.textContent = `Welcome, ${userData.name}!`;
-    }
-  }
-}
-```
+| Permission      | Reason                             |
+| --------------- | ---------------------------------- |
+| `--allow-read`  | Read project files and cache       |
+| `--allow-write` | Write analysis results and cache   |
+| `--allow-env`   | Access environment variables       |
+| `--allow-net`   | Claude CLI may need network access |
+| `--allow-run`   | Execute Claude CLI subprocess      |
 
-## 📖 API Documentation
+## 📊 Output
 
-### Core Analyzer Function
+The analyzer generates three main outputs in the `analysis/` directory:
 
-```typescript
-import { analyzeDartApp } from 'dart-to-ts-v2';
+### 1. file-categories.json
 
-// Analyze a Dart web project
-const analysis = await analyzeDartApp('/path/to/dart/web/project', {
-  comprehensive: false,    // Use chunk-by-chunk analysis (faster)
-  verbose: true,          // Show detailed progress
-  model: 'sonnet',        // Claude model: 'sonnet' or 'opus'
-  timeout: 600000         // Analysis timeout in milliseconds
-});
+Raw categorization of Dart files by type (components, services, state, etc.)
 
-console.log(analysis.appPurpose);
-console.log(analysis.dependencies.tsEquivalents);
-```
+### 2. analysis.json
 
-### File Scanner
+Structured functional analysis including:
 
-The scanner categorizes Dart files by their role in web applications:
+- Application purpose
+- Core features
+- User workflows
+- State management patterns
+- Data flow
+- Dependencies and TypeScript equivalents
 
-```typescript
-import { scanDartProject } from './src/scanner';
+### 3. report.md
 
-const categories = scanDartProject('./dart-web-project');
-console.log(categories);
-// Output:
-// {
-//   components: ['lib/src/ui/components/user_panel.dart'],
-//   state: ['lib/src/redux/actions.dart', 'lib/src/redux/reducers.dart'],
-//   services: ['lib/src/services/api_service.dart'],
-//   utils: ['lib/src/utils/date_utils.dart'],
-//   entry: 'web/main.dart',
-//   models: ['lib/src/models/user.dart']
-// }
-```
+Human-readable Markdown report with comprehensive analysis
 
-### Code Extractor
+## 🔄 Migration from Node.js
 
-Extract and analyze specific code patterns from Dart web applications:
+This project has been migrated from Node.js to Deno with significant improvements:
 
-```typescript
-import { extractCodeForAnalysis } from './src/extractor';
+### Key Improvements
 
-const chunks = await extractCodeForAnalysis('./dart-project', categories);
-// Returns structured code chunks ready for AI analysis
-```
+- **Zero Configuration TypeScript**: No tsconfig.json needed
+- **Built-in Toolchain**: Integrated linter, formatter, and test runner
+- **Better Security**: Explicit permission model
+- **Simplified Dependencies**: No node_modules, using import maps
+- **Modern ES Modules**: No CommonJS complications
+- **Native Subprocess API**: Better process management
+- **Web Standards**: Using Web Crypto API and other standards
 
-## 🏗️ Architecture
+### Technical Changes
 
-### Project Structure
-
-```plaintext
-src/
-├── index.ts           # Main CLI entry point and orchestrator
-├── scanner.ts         # Dart file discovery and categorization  
-├── extractor.ts       # Code chunk extraction for analysis
-├── analyzer.ts        # AI-powered functional analysis
-├── claude-cli.ts      # Claude AI integration
-├── prompts.ts         # Analysis prompt templates
-├── types/
-│   ├── analysis.ts    # Analysis result types
-│   ├── claude.ts      # Claude API types
-│   └── index.ts       # Type exports
-└── utils/
-    └── claude-utils.ts # Claude API utilities and caching
-
-test/                   # Integration and unit tests
-frontend_release_dashboard/  # Sample Dart web application
-```
-
-### Analysis Flow
-
-1. **File Scanning**: Discovers and categorizes Dart files by role (components, services, state, etc.)
-2. **Code Extraction**: Extracts relevant code chunks for analysis
-3. **AI Analysis**: Uses Claude to understand functionality, patterns, and dependencies
-4. **Report Generation**: Creates comprehensive analysis reports with TypeScript conversion guidance
-
-## 🔧 Configuration
-
-Create a `dart-to-ts.config.js` file for custom analysis settings:
-
-```javascript
-module.exports = {
-  // Analysis options
-  analysis: {
-    includeTests: false,
-    analyzeComments: true,
-    generateReport: true,
-    timeout: 600000  // 10 minutes
-  },
-  
-  // Web-specific mappings for Dart packages to TypeScript
-  webDependencyMapping: {
-    'dart:html': 'DOM API',
-    'over_react': 'react + react-dom',
-    'w_transport': 'axios',
-    'built_value': 'TypeScript interfaces + immer',
-    'redux': '@reduxjs/toolkit'
-  },
-  
-  // Files to ignore during analysis
-  ignore: [
-    '**/*.g.dart',        // Generated files
-    '**/generated/**',    // Generated directories
-    '**/*.test.dart'      // Test files (optional)
-  ]
-};
-```
+| Component          | Node.js Version                 | Deno Version                |
+| ------------------ | ------------------------------- | --------------------------- |
+| Entry Point        | `src/index.ts`                  | `main.ts`                   |
+| Dependencies       | `package.json` + `node_modules` | `deps.ts` + `deno.json`     |
+| CLI Framework      | Commander                       | Cliffy                      |
+| File Operations    | Node.js fs module               | Deno APIs                   |
+| Process Management | child_process                   | Deno.Command                |
+| Testing            | Custom runner                   | Deno's built-in test runner |
+| Crypto             | Node crypto module              | Web Crypto API              |
+| Path Operations    | Node path module                | @std/path                   |
 
 ## 🧪 Testing
 
-Run the test suite to verify analyzer functionality:
+The test suite uses Deno's built-in test runner with BDD syntax:
 
 ```bash
-# Run integration tests
-pnpm test
+# Run all tests
+deno task test
 
-# Run with build verification
-pnpm check
+# Run tests with coverage
+deno test --coverage
 
-# Lint and format code
-pnpm lint
-pnpm format
+# Run specific test file
+deno test test/claude-integration.test.ts
 ```
 
-### Test Structure
+## 🌐 Dart Web Pattern Support
 
-```plaintext
-test/
-└── claude-integration.test.ts  # Claude CLI integration tests
-```
-
-The test suite includes:
-
-- Basic Claude prompt execution
-- Dart code analysis with JSON responses
-- Prompt template validation
-- JSON response cleaning and parsing
-
-## 🌐 Dart Web Patterns Supported
+The analyzer recognizes and converts these Dart web patterns:
 
 ### Web Application Entry Points
 
 ```dart
 // web/main.dart
 import 'dart:html' as html;
-import 'package:over_react/react_dom.dart' as react_dom;
-
-Future<void> main() async {
+void main() {
   final app = MyWebApp();
-  react_dom.render(app.render(), html.querySelector('#app'));
+  html.querySelector('#app')?.append(app.element);
 }
 ```
 
-### HTTP Services and APIs
+### HTTP Services
 
 ```dart
-// lib/src/services/http_service.dart
-import 'package:w_transport/w_transport.dart' as transport;
-
-class HttpService {
+// Converts w_transport to axios/fetch patterns
+class ApiService {
   Future<Response> get(String endpoint) async {
-    final request = transport.Http.get()..uri = Uri.parse(endpoint);
-    return await request.send();
+    // Analysis identifies HTTP patterns
   }
 }
 ```
 
-### State Management with Redux
+### State Management
 
 ```dart
-// lib/src/redux/store.dart
-import 'package:redux/redux.dart';
-
+// Redux pattern analysis and conversion guidance
 final store = Store<AppState>(
   appReducer,
   initialState: AppState(),
-  middleware: [
-    fetchDataMiddleware,
-    loggingMiddleware,
-  ],
 );
 ```
 
-### DOM Manipulation
+## 🛠️ Configuration
 
-```dart
-// lib/src/utils/dom_utils.dart
-import 'dart:html' as html;
+The `deno.json` file contains all configuration:
 
-void updateElement(String selector, String content) {
-  final element = html.querySelector(selector);
-  element?.text = content;
+```json
+{
+  "tasks": {
+    "start": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run main.ts",
+    "dev": "deno run --watch --allow-read --allow-write --allow-env --allow-net --allow-run main.ts",
+    "test": "deno test --allow-read --allow-write --allow-env"
+  },
+  "imports": {
+    "@std/path": "jsr:@std/path@^1.0.0",
+    "@cliffy/command": "jsr:@cliffy/command@^1.0.0"
+  }
 }
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions focused on improving Dart web application analysis!
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests: `deno task test`
+5. Check code quality: `deno task check`
+6. Commit your changes
+7. Push to the branch
+8. Open a Pull Request
 
-### Development Setup
+### Development Guidelines
 
-1. **Fork and clone** the repository
-2. **Install dependencies**: `pnpm install`
-3. **Build the project**: `pnpm build`
-4. **Run tests**: `pnpm test`
-5. **Analyze sample project**: `pnpm analyze`
-
-### Code Style Guidelines
-
-- **TypeScript**: Use strict mode with comprehensive type definitions
-- **ESLint + Prettier**: Follow configured linting and formatting rules
-- **Testing**: Add tests for new analysis capabilities
-- **Documentation**: Update README for new web-specific features
-
-### Commit Convention
-
-```bash
-feat(analyzer): add support for dart:js interop analysis
-fix(scanner): improve web service file categorization  
-docs(readme): add examples for server-side Dart conversion
-test(integration): add tests for Redux pattern analysis
-```
-
-### Pull Request Process
-
-1. **Create feature branch** from `main`
-2. **Implement changes** with comprehensive tests
-3. **Run quality checks**: `pnpm check`
-4. **Update documentation** for web-specific features
-5. **Submit PR** with clear description of web conversion improvements
-
-## 📊 Sample Analysis Output
-
-The analyzer generates comprehensive reports for Dart web projects:
-
-```markdown
-# Dart Application Functional Analysis Report
-
-## Application Purpose
-A web dashboard application for tracking and displaying software release information
-
-## Core Features
-- Configure transport platform for browser
-- DOM manipulation and event handling
-- HTTP API integration with backend services
-- Redux-based state management
-- Interactive web components
-
-## Dependency Mapping
-- **dart:html** → DOM API + document/window globals
-- **over_react** → react + react-dom  
-- **w_transport** → axios + fetch API
-- **redux** → @reduxjs/toolkit
-- **built_value** → TypeScript interfaces + immer
-
-## Conversion Strategy
-1. Replace dart:html with native DOM APIs
-2. Convert Over_React components to React functional components
-3. Implement Redux Toolkit for state management  
-4. Use Axios for HTTP transport layer
-5. Create TypeScript interfaces for all data models
-```
+- Follow Deno style guide
+- Add tests for new features
+- Update documentation
+- Use conventional commits
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details
 
-## 🆘 Support & Resources
+## 🆘 Support
 
-- **Documentation**: Comprehensive guides for web-specific conversions
-- **Issues**: [GitHub Issues](https://github.com/your-username/dart-to-ts-v2/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/dart-to-ts-v2/discussions)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/dart-to-ts-analyzer/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/dart-to-ts-analyzer/discussions)
 
-### Supported Dart Web Technologies
+## 🙏 Acknowledgments
 
-| Dart Package | TypeScript Equivalent | Analysis Support |
-|-------------|---------------------|-----------------|
-| `dart:html` | DOM API | ✅ Full |
-| `over_react` | React + React DOM | ✅ Full |
-| `w_transport` | Axios | ✅ Full |
-| `redux` | Redux Toolkit | ✅ Full |
-| `built_value` | TypeScript + Immer | ✅ Full |
-| `built_collection` | Immutable.js | ✅ Partial |
-
-## 🗺️ Roadmap
-
-- [ ] **Enhanced DOM Analysis**: Deeper dart:html to DOM API conversion patterns
-- [ ] **Server-Side Dart**: Analysis support for Dart web servers and API backends  
-- [ ] **WebSocket Support**: Analysis of dart:io WebSocket patterns
-- [ ] **PWA Conversion**: Progressive Web App feature analysis
-- [ ] **Build Integration**: Automated build.yaml to Vite conversion
-- [ ] **CSS-in-Dart**: Analysis of inline styling patterns
-- [ ] **Web Workers**: Dart Isolate to Web Worker conversion patterns
+- Built with [Deno](https://deno.com/) - The secure JavaScript/TypeScript runtime
+- CLI powered by [Cliffy](https://cliffy.io/) - Command line framework for Deno
+- AI analysis by [Claude](https://claude.ai/) - Anthropic's AI assistant
+- Originally migrated from Node.js to demonstrate Deno's modern capabilities
 
 ---
 
-**Focus**: Dart Web Applications & Services → TypeScript  
-**Not Supported**: Flutter mobile/desktop applications
-
-Made with ❤️ for the Dart web development community
+**Made with ❤️ using Deno's modern runtime**
