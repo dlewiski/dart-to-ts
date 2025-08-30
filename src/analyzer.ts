@@ -16,8 +16,8 @@ import {
   type FunctionalAnalysis,
 } from './types/index.ts';
 
-// Initialize cache
-const cache = new ResponseCache('.claude-cache', 120); // 2 hour cache
+// Initialize cache with default duration (will be replaced with configurable cache)
+let cache = new ResponseCache('.claude-cache', 120); // 2 hour default
 
 /**
  * Extract and validate analysis configuration from options
@@ -27,15 +27,24 @@ interface AnalysisConfig {
   verbose: boolean;
   model: 'sonnet' | 'opus';
   timeout: number | undefined;
+  cacheDuration: number;
 }
 
 function extractAnalysisConfig(options: AnalysisOptions): AnalysisConfig {
-  return {
+  const config = {
     useCache: options.useCache ?? true,
     verbose: options.verbose ?? false,
     model: options.model ?? 'sonnet',
     timeout: options.timeout ?? undefined,
+    cacheDuration: options.cacheDuration ?? 120,
   };
+
+  // Update cache with new duration if it has changed
+  // Note: ResponseCache doesn't expose ttlMinutes, so we'll create a new instance
+  // This could be optimized by making the cache instance keyed by duration
+  cache = new ResponseCache('.claude-cache', config.cacheDuration);
+
+  return config;
 }
 
 /**

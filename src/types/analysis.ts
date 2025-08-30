@@ -147,4 +147,6 @@ export interface AnalysisOptions {
   verbose?: boolean;
   model?: 'sonnet' | 'opus';
   timeout?: number;
+  /** Cache duration in minutes (default: 120) */
+  cacheDuration?: number;
 }

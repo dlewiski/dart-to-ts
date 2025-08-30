@@ -92,9 +92,14 @@ ${code}
       prompt,
       undefined,
       claudeOptions,
-    ) as ChunkAnalysisResult;
+    );
 
-    return result;
+    // Validate result type
+    if (result && typeof result === 'object' && result !== null) {
+      return result as ChunkAnalysisResult;
+    }
+
+    return null;
   } catch (error) {
     console.error(`Error analyzing chunk ${chunk.category}:`, error);
     return null;
