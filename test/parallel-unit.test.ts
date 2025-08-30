@@ -174,7 +174,7 @@ Deno.test('Parallel Unit - Basic Functionality', async () => {
   assertExists(result.appPurpose, 'Should have app purpose');
   assertEquals(result.coreFeatures.length, 2, 'Should analyze all chunks');
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 // Test 2: Parallel execution timing
@@ -197,7 +197,7 @@ Deno.test('Parallel Unit - Parallel Execution Timing', async () => {
     `Expected duration between 150-350ms, got ${duration}ms`,
   );
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 // Test 3: Progress events
@@ -231,7 +231,7 @@ Deno.test('Parallel Unit - Progress Events', async () => {
   assertEquals(lastEvent.percentage, 100, 'Should complete at 100%');
   assertEquals(lastEvent.processed, 1, 'Should process 1 chunk');
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 // Test 4: Error handling
@@ -252,7 +252,7 @@ Deno.test('Parallel Unit - Error Handling', async () => {
   assertExists(result, 'Should return result despite errors');
   assertEquals(result.coreFeatures.length, 3, 'Should handle all chunks');
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 // Test 5: Concurrency limits
@@ -279,7 +279,7 @@ Deno.test('Parallel Unit - Concurrency Limits', async () => {
     `Max concurrent (${maxConcurrent}) should not exceed limit (${maxWorkers})`,
   );
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 // Test 6: Large dataset handling
@@ -298,7 +298,7 @@ Deno.test('Parallel Unit - Large Dataset Handling', async () => {
   assertEquals(result.coreFeatures.length, 100, 'Should process all chunks');
   assert(duration < 1000, `Should complete quickly (${duration}ms < 1000ms)`);
 
-  await analyzer.shutdown();
+  analyzer.shutdown();
 });
 
 export { MockParallelAnalyzer };

@@ -1,7 +1,7 @@
 import { colors, Command, join } from './deps.ts';
 import { AnalysisService } from './src/services/analysis-service.ts';
-import { pathExists } from './src/utils/file-operations.ts';
 import { type CLIOptions, type FunctionalAnalysis } from './src/types/index.ts';
+import { pathExists } from './src/utils/file-operations.ts';
 
 /**
  * Main analysis function with improved error handling and logging
@@ -53,16 +53,16 @@ function displayCompletionSummary(savedPaths: {
 /**
  * Prepare and validate analysis configuration
  */
-async function prepareAnalysisConfig(
+function prepareAnalysisConfig(
   options: Record<string, unknown>,
   projectPath?: string,
-): Promise<{ path: string; options: CLIOptions }> {
+): { path: string; options: CLIOptions } {
   // Determine analysis path
   const analysisPath = projectPath ||
     join(Deno.cwd(), 'frontend_release_dashboard');
 
   // Validate project path exists
-  if (!await pathExists(analysisPath)) {
+  if (!pathExists(analysisPath)) {
     throw new Error(`Project path "${analysisPath}" does not exist.`);
   }
 
@@ -117,16 +117,10 @@ if (import.meta.main) {
       'Choose Claude model: sonnet (default) or opus',
       { default: 'sonnet' },
     )
-    .option(
-      '-v, --verbose',
-      'Show detailed progress and API usage',
-      { default: false },
-    )
-    .option(
-      '--no-cache',
-      "Don't use cached responses",
-      { default: false },
-    )
+    .option('-v, --verbose', 'Show detailed progress and API usage', {
+      default: false,
+    })
+    .option('--no-cache', "Don't use cached responses", { default: false })
     .option(
       '-t, --timeout <seconds:number>',
       'Timeout for analysis in seconds',
@@ -144,7 +138,7 @@ if (import.meta.main) {
     )
     .action(async (options, projectPath?: string) => {
       try {
-        const analysisConfig = await prepareAnalysisConfig(
+        const analysisConfig = prepareAnalysisConfig(
           options,
           projectPath,
         );
