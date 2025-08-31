@@ -173,7 +173,8 @@ function mergeDependencyResults(
 ): void {
   analysis.dependencies = {
     dart: result.coreDependencies || [],
-    tsEquivalents: result.tsEquivalents || {},
+    // Phase 1: Only understand Dart dependencies, no TypeScript mapping
+    tsEquivalents: {}, // Will be determined in Phase 2
   };
 }
 
@@ -253,7 +254,10 @@ function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
     case 'dependencies':
       return {
         coreDependencies: [],
-        tsEquivalents: {},
+        packageCategories: {},
+        versionConstraints: {},
+        devDependencies: [],
+        dependencyComplexity: 'low' as const,
       };
     default:
       return {};
@@ -486,11 +490,11 @@ function transformComprehensiveResult(
     dependencies: result.dependencies
       ? {
         dart: result.dependencies.critical || [],
-        tsEquivalents: {}, // We don't have tsEquivalents in the comprehensive result
+        tsEquivalents: {}, // Phase 2: Will be determined during migration planning
       }
       : {
         dart: [],
-        tsEquivalents: {},
+        tsEquivalents: {}, // Phase 2: Will be determined during migration planning
       },
   };
 }

@@ -47,9 +47,8 @@ export async function safeReadFile(
 ): Promise<string> {
   const fullPath = validatePath(projectPath, relativePath);
   await validateFileSize(fullPath);
-  const decoder = new TextDecoder('utf-8');
   const data = await Deno.readFile(fullPath);
-  return decoder.decode(data);
+  return TEXT_DECODER.decode(data);
 }
 
 /**
@@ -77,8 +76,7 @@ export async function safeWriteFile(
 ): Promise<void> {
   const dir = dirname(filePath);
   await ensureDirectoryExists(dir);
-  const encoder = new TextEncoder();
-  await Deno.writeFile(filePath, encoder.encode(content));
+  await Deno.writeFile(filePath, TEXT_ENCODER.encode(content));
 }
 
 /**
@@ -142,13 +140,18 @@ export function getStats(filePath: string): Deno.FileInfo {
 }
 
 /**
+ * Text encoder/decoder instances for reuse
+ */
+const TEXT_ENCODER = new TextEncoder();
+const TEXT_DECODER = new TextDecoder('utf-8');
+
+/**
  * Read file synchronously with UTF-8 encoding
  */
 export function readFileSync(filePath: string): string {
   try {
-    const textDecoder = new TextDecoder('utf-8');
     const fileData = Deno.readFileSync(filePath);
-    return textDecoder.decode(fileData);
+    return TEXT_DECODER.decode(fileData);
   } catch (error) {
     throw new Error(`Failed to read file ${filePath}: ${error}`);
   }
@@ -159,7 +162,11 @@ export function readFileSync(filePath: string): string {
  */
 export function readJsonFileSync(filePath: string): unknown {
   const content = readFileSync(filePath);
-  return JSON.parse(content);
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    throw new Error(`Failed to parse JSON from ${filePath}: ${error}`);
+  }
 }
 
 /**
@@ -167,8 +174,7 @@ export function readJsonFileSync(filePath: string): unknown {
  */
 export function writeFileSync(filePath: string, content: string): void {
   try {
-    const textEncoder = new TextEncoder();
-    Deno.writeFileSync(filePath, textEncoder.encode(content));
+    Deno.writeFileSync(filePath, TEXT_ENCODER.encode(content));
   } catch (error) {
     throw new Error(`Failed to write file ${filePath}: ${error}`);
   }

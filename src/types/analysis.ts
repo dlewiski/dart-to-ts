@@ -90,11 +90,12 @@ export interface ChunkAnalysisResult {
   errorHandling?: string[];
   caching?: string;
 
-  // Dependency analysis
+  // Dependency analysis (Phase 1: Understanding only)
   coreDependencies?: string[];
-  tsEquivalents?: Record<string, string>;
-  missingEquivalents?: string[];
-  customImplementations?: string[];
+  packageCategories?: Record<string, string[]>;
+  versionConstraints?: Record<string, string>;
+  devDependencies?: string[];
+  dependencyComplexity?: 'low' | 'medium' | 'high';
 
   // Business logic analysis
   rules?: string[];

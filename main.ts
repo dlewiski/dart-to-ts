@@ -57,29 +57,39 @@ async function prepareAnalysisConfig(
   options: Record<string, unknown>,
   projectPath?: string,
 ): Promise<{ path: string; options: CLIOptions }> {
-  // Determine analysis path
+  const analysisPath = await validateAnalysisPath(projectPath);
+  const cliOptions = createCLIOptions(options);
+
+  return { path: analysisPath, options: cliOptions };
+}
+
+/**
+ * Validate and determine analysis path
+ */
+async function validateAnalysisPath(projectPath?: string): Promise<string> {
   const analysisPath = projectPath ||
     join(Deno.cwd(), 'frontend_release_dashboard');
 
-  // Validate project path exists
   if (!(await pathExistsAsync(analysisPath))) {
     throw new Error(`Project path "${analysisPath}" does not exist.`);
   }
 
-  // Validate and prepare model option
-  const validatedModel = validateModelOption(options.model as string);
+  return analysisPath;
+}
 
-  const cliOptions: CLIOptions = {
+/**
+ * Create CLI options from raw input
+ */
+function createCLIOptions(options: Record<string, unknown>): CLIOptions {
+  return {
     comprehensive: options.comprehensive as boolean,
     verbose: options.verbose as boolean,
     noCache: !options.cache as boolean,
-    model: validatedModel,
+    model: validateModelOption(options.model as string),
     timeout: (options.timeout as number) * 1000, // Convert seconds to milliseconds
     parallel: options.parallel as boolean,
     workers: options.workers as number,
   };
-
-  return { path: analysisPath, options: cliOptions };
 }
 
 /**

@@ -8,15 +8,10 @@ import {
 } from '../utils/file-operations.ts';
 import {
   type AnalysisOptions,
-  type BusinessLogic,
   type CLIOptions,
   type CodeChunk,
-  type DataFlow,
-  type Dependencies,
   type FileCategories,
   type FunctionalAnalysis,
-  type StateManagement,
-  type Workflow,
 } from '../types/index.ts';
 
 export interface AnalysisResult {
@@ -186,7 +181,9 @@ export class AnalysisService {
     // Generate and save human-readable report
     const report = this.generateReadableReport(result.analysis);
     await this.saveWithErrorHandling(
-      () => safeWriteJsonFile(reportPath, report),
+      async () => {
+        await Deno.writeTextFile(reportPath, report);
+      },
       `Readable report saved to: ${reportPath}\n`,
       'Failed to save report',
     );
@@ -218,95 +215,62 @@ export class AnalysisService {
    * Generate comprehensive human-readable analysis report
    */
   private generateReadableReport(analysis: FunctionalAnalysis): string {
-    const sections = [
-      this.generateHeaderSection(),
-      this.generatePurposeSection(analysis.appPurpose),
-      this.generateFeaturesSection(analysis.coreFeatures),
-      this.generateWorkflowsSection(analysis.userWorkflows),
-      this.generateDataArchitectureSection(analysis.dataFlow),
-      this.generateStateManagementSection(analysis.stateManagement),
-      this.generateBusinessLogicSection(analysis.businessLogic),
-      this.generateDependencyMappingSection(analysis.dependencies),
-      this.generateConversionStrategySection(),
-    ];
+    // Generate markdown report from analysis
+    const report: string[] = [];
 
-    return sections.join('\n\n');
-  }
+    report.push('# Dart Application Analysis Report\n');
+    report.push(`## Application Purpose\n${analysis.appPurpose}\n`);
 
-  private generateHeaderSection(): string {
-    return '# Dart Application Functional Analysis Report';
-  }
+    if (analysis.coreFeatures.length > 0) {
+      report.push('## Core Features\n');
+      analysis.coreFeatures.forEach((feature) => {
+        report.push(`- ${feature}`);
+      });
+      report.push('');
+    }
 
-  private generatePurposeSection(purpose: string): string {
-    return `## Application Purpose\n${purpose}`;
-  }
+    if (analysis.userWorkflows.length > 0) {
+      report.push('## User Workflows\n');
+      analysis.userWorkflows.forEach((workflow) => {
+        report.push(`### ${workflow.name}`);
+        workflow.steps.forEach((step) => {
+          report.push(`1. ${step}`);
+        });
+        report.push('');
+      });
+    }
 
-  private generateFeaturesSection(features: string[]): string {
-    const featureList = features.map((feature) => `- ${feature}`).join('\n');
-    return `## Core Features\n${featureList}`;
-  }
+    report.push('## State Management\n');
+    report.push(`- Pattern: ${analysis.stateManagement.pattern}`);
+    report.push(
+      `- Key Actions: ${
+        analysis.stateManagement.keyActions.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('');
 
-  private generateWorkflowsSection(workflows: Workflow[]): string {
-    const workflowSections = workflows
-      .map((workflow) => {
-        const stepList = workflow.steps
-          .map((step, index) => `${index + 1}. ${step}`)
-          .join('\n');
-        return `### ${workflow.name}\n${stepList}`;
-      })
-      .join('\n');
+    report.push('## Data Flow\n');
+    report.push(
+      `- Sources: ${analysis.dataFlow.sources.join(', ') || 'None identified'}`,
+    );
+    report.push(
+      `- Transformations: ${
+        analysis.dataFlow.transformations.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('');
 
-    return `## User Workflows\n${workflowSections}`;
-  }
+    report.push('## Dependencies\n');
+    report.push(
+      `- Dart packages: ${
+        analysis.dependencies.dart.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('\n---\n');
+    report.push(
+      '*Note: TypeScript migration strategies will be determined in Phase 2*',
+    );
 
-  private generateDataArchitectureSection(dataFlow: DataFlow): string {
-    const sources = dataFlow.sources.map((s: string) => `- ${s}`).join('\n');
-    const transformations = dataFlow.transformations
-      .map((t: string) => `- ${t}`)
-      .join('\n');
-    const destinations = dataFlow.destinations
-      .map((d: string) => `- ${d}`)
-      .join('\n');
-
-    return `## Data Architecture\n### Sources\n${sources}\n\n### Transformations\n${transformations}\n\n### Destinations\n${destinations}`;
-  }
-
-  private generateStateManagementSection(
-    stateManagement: StateManagement,
-  ): string {
-    return `## State Management\n- **Pattern**: ${stateManagement.pattern}\n- **Key Actions**: ${
-      stateManagement.keyActions.join(
-        ', ',
-      )
-    }\n- **Selectors**: ${stateManagement.selectors.join(', ')}`;
-  }
-
-  private generateBusinessLogicSection(businessLogic: BusinessLogic): string {
-    const rules = businessLogic.rules.map((r: string) => `- ${r}`).join('\n');
-    const validations = businessLogic.validations
-      .map((v: string) => `- ${v}`)
-      .join('\n');
-
-    return `## Business Logic\n### Rules\n${rules}\n\n### Validations\n${validations}`;
-  }
-
-  private generateDependencyMappingSection(dependencies: Dependencies): string {
-    const mappings = Object.entries(dependencies.tsEquivalents)
-      .map(([dart, ts]) => `- **${dart}** → ${ts}`)
-      .join('\n');
-
-    return `## Dependency Mapping\n${mappings}`;
-  }
-
-  private generateConversionStrategySection(): string {
-    const strategies = [
-      '1. Implement Redux Toolkit for state management',
-      '2. Use React functional components with hooks',
-      '3. Create TypeScript interfaces for all data models',
-      '4. Implement service layer with Axios',
-      '5. Maintain existing business logic and validations',
-    ].join('\n');
-
-    return `## Conversion Strategy\nBased on this analysis, the TypeScript conversion should:\n${strategies}`;
+    return report.join('\n');
   }
 }

@@ -93,22 +93,26 @@ ${code}
 Return ONLY the JSON object, no explanation.`,
 
   /**
-   * Analyze dependencies and suggest TypeScript equivalents
+   * Analyze dependencies (Phase 1: Understanding only)
    */
   dependencies: (pubspecContent: string) => `
-Analyze this pubspec.yaml and map Dart packages to TypeScript equivalents.
+Analyze this pubspec.yaml and identify the Dart packages and their usage patterns.
 
 Return a JSON object with EXACTLY this structure:
 {
   "coreDependencies": ["package1", "package2"],
-  "tsEquivalents": {
-    "dart_package": "typescript_equivalent",
-    "over_react": "react",
-    "redux": "@reduxjs/toolkit",
-    "built_value": "immer + TypeScript interfaces"
+  "packageCategories": {
+    "ui_framework": ["over_react", "react_dom"],
+    "state_management": ["redux", "built_redux"],
+    "data_handling": ["built_value", "built_collection"],
+    "networking": ["http", "dio"],
+    "utilities": ["meta", "collection"]
   },
-  "missingEquivalents": ["packages without clear TS equivalent"],
-  "customImplementations": ["features that need custom implementation"]
+  "versionConstraints": {
+    "package_name": "version_constraint"
+  },
+  "devDependencies": ["build_runner", "build_web_compilers"],
+  "dependencyComplexity": "low|medium|high"
 }
 
 Pubspec content:

@@ -58,22 +58,7 @@ export async function executeClaude(
         timeout,
       );
 
-      if (outputFormat === 'json') {
-        try {
-          const jsonResponse = JSON.parse(result);
-          return {
-            result: jsonResponse.result
-              ? JSON.parse(jsonResponse.result)
-              : jsonResponse,
-            raw: result,
-          };
-        } catch (_parseError) {
-          // If JSON parsing fails, return raw result
-          return { result: result.trim(), raw: result };
-        }
-      }
-
-      return { result: result.trim(), raw: result };
+      return formatClaudeResponse(result, outputFormat);
     } catch (error) {
       const errorContext: ErrorContext = {
         operation: 'Claude CLI execution',
@@ -293,6 +278,31 @@ function extractAndValidateJson(text: string): unknown {
   }
 
   return text;
+}
+
+/**
+ * Format Claude response based on output format
+ */
+function formatClaudeResponse(
+  result: string,
+  outputFormat: string,
+): ClaudeResponse {
+  if (outputFormat === 'json') {
+    try {
+      const jsonResponse = JSON.parse(result);
+      return {
+        result: jsonResponse.result
+          ? JSON.parse(jsonResponse.result)
+          : jsonResponse,
+        raw: result,
+      };
+    } catch (_parseError) {
+      // If JSON parsing fails, return raw result
+      return { result: result.trim(), raw: result };
+    }
+  }
+
+  return { result: result.trim(), raw: result };
 }
 
 /**
