@@ -1,101 +1,225 @@
-import { analyzeCode, executeClaude } from './claude-cli';
-import { analysisPrompts } from './prompts';
+import { analyzeCode, executeClaude } from './claude-cli.ts';
+import { analysisPrompts } from './prompts.ts';
 import {
-  ResponseCache,
-  ProgressIndicator,
   cleanJsonResponse,
-  formatUsageInfo,
   extractUsageInfo,
-} from './utils/claude-utils';
+  formatUsageInfo,
+  ProgressIndicator,
+  ResponseCache,
+} from './utils/claude-utils.ts';
 import {
-  type CodeChunk,
-  type FunctionalAnalysis,
   type AnalysisOptions,
   type ChunkAnalysisResult,
-  type ComprehensiveAnalysisResult,
   type ClaudeOptions,
-} from './types';
+  type CodeChunk,
+  type ComprehensiveAnalysisResult,
+  type FunctionalAnalysis,
+} from './types/index.ts';
 
-// Initialize cache
-const cache = new ResponseCache('.claude-cache', 120); // 2 hour cache
+// Initialize cache with default duration (will be replaced with configurable cache)
+let cache = new ResponseCache('.claude-cache', 120); // 2 hour default
+
+/**
+ * Extract and validate analysis configuration from options
+ */
+interface AnalysisConfig {
+  useCache: boolean;
+  verbose: boolean;
+  model: 'sonnet' | 'opus';
+  timeout: number | undefined;
+  cacheDuration: number;
+}
+
+function extractAnalysisConfig(options: AnalysisOptions): AnalysisConfig {
+  const config = {
+    useCache: options.useCache ?? true,
+    verbose: options.verbose ?? false,
+    model: options.model ?? 'sonnet',
+    timeout: options.timeout ?? undefined,
+    cacheDuration: options.cacheDuration ?? 120,
+  };
+
+  // Update cache with new duration if it has changed
+  // Note: ResponseCache doesn't expose ttlMinutes, so we'll create a new instance
+  // This could be optimized by making the cache instance keyed by duration
+  cache = new ResponseCache('.claude-cache', config.cacheDuration);
+
+  return config;
+}
+
+/**
+ * Process a chunk with caching logic
+ */
+async function processChunkWithCaching(
+  chunk: CodeChunk,
+  config: AnalysisConfig,
+): Promise<ChunkAnalysisResult | null> {
+  const cacheKey = `${chunk.category}_${config.model}`;
+  const chunkContent = chunk.files[0]?.content || '';
+
+  // Try to get from cache first
+  if (config.useCache) {
+    const cachedResult = await cache.get<ChunkAnalysisResult>(chunkContent, {
+      category: cacheKey,
+    });
+    if (cachedResult) {
+      return cachedResult;
+    }
+  }
+
+  // Analyze the chunk
+  const claudeOptions: ClaudeOptions = {
+    model: config.model,
+    verbose: config.verbose,
+  };
+  if (config.timeout !== undefined) {
+    claudeOptions.timeout = config.timeout;
+  }
+
+  const result = await analyzeChunkByCategory(chunk, claudeOptions);
+
+  // Cache the result
+  if (config.useCache && result) {
+    await cache.set(chunkContent, result, { category: cacheKey });
+  }
+
+  return result;
+}
+
+/**
+ * Handle errors during chunk analysis
+ */
+function handleChunkAnalysisError(
+  error: unknown,
+  chunk: CodeChunk,
+  verbose: boolean,
+  analysis: Partial<FunctionalAnalysis>,
+): void {
+  console.error(`\n⚠️  Error analyzing ${chunk.category}:`, error);
+
+  if (verbose) {
+    const errorDetails = {
+      category: chunk.category,
+      filesCount: chunk.files.length,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
+    console.error('Error details:', errorDetails);
+  }
+
+  // Add fallback data for this chunk category
+  const fallbackResult = getDefaultResultForCategory(chunk.category);
+  mergeAnalysisResults(analysis, fallbackResult, chunk.category);
+}
+
+/**
+ * Merge strategies for different chunk types
+ */
+function mergeEntryResults(
+  analysis: Partial<FunctionalAnalysis>,
+  result: ChunkAnalysisResult,
+): void {
+  if (result.appPurpose) {
+    analysis.appPurpose = result.appPurpose;
+  }
+  if (result.initialization) {
+    analysis.coreFeatures = result.initialization;
+  }
+}
+
+function mergeStateResults(
+  analysis: Partial<FunctionalAnalysis>,
+  result: ChunkAnalysisResult,
+): void {
+  analysis.stateManagement = {
+    pattern: result.middleware?.join(', ') || 'Redux',
+    stateShape: result.stateShape || {},
+    keyActions: result.keyActions || [],
+    selectors: result.selectors || [],
+  };
+}
+
+function mergeComponentResults(
+  analysis: Partial<FunctionalAnalysis>,
+  result: ChunkAnalysisResult,
+): void {
+  if (result.userFeatures) {
+    analysis.coreFeatures = [
+      ...(analysis.coreFeatures || []),
+      ...result.userFeatures,
+    ];
+  }
+  if (result.interactions) {
+    analysis.userWorkflows = [{
+      name: 'User Interactions',
+      steps: result.interactions,
+    }];
+  }
+}
+
+function mergeServiceResults(
+  analysis: Partial<FunctionalAnalysis>,
+  result: ChunkAnalysisResult,
+): void {
+  analysis.dataFlow = {
+    sources: result.dataSource || [],
+    transformations: result.operations || [],
+    destinations: result.dataFormat ? ['API responses'] : [],
+  };
+}
+
+function mergeDependencyResults(
+  analysis: Partial<FunctionalAnalysis>,
+  result: ChunkAnalysisResult,
+): void {
+  analysis.dependencies = {
+    dart: result.coreDependencies || [],
+    // Phase 1: Only understand Dart dependencies, no TypeScript mapping
+    tsEquivalents: {}, // Will be determined in Phase 2
+  };
+}
 
 /**
  * Analyze Dart code functionality using Claude CLI
  */
 export async function analyzeFunctionality(
   chunks: CodeChunk[],
-  options: AnalysisOptions = {}
+  options: AnalysisOptions = {},
 ): Promise<FunctionalAnalysis> {
-  const {
-    useCache = true,
-    verbose = false,
-    model = 'sonnet',
-    timeout,
-  } = options;
+  const analysisConfig = extractAnalysisConfig(options);
 
   console.log(
-    `\n🧠 Analyzing ${chunks.length} code chunks using Claude (model: ${model})...\n`
+    `\n🧠 Analyzing ${chunks.length} code chunks using Claude (model: ${analysisConfig.model})...\n`,
   );
 
   const progress = new ProgressIndicator(chunks.length);
   const analysis: Partial<FunctionalAnalysis> = {};
 
   // Process each chunk type
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    progress.update(i + 1, `Analyzing ${chunk.category}...`);
+  for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+    const currentChunk = chunks[chunkIndex]!;
+    await progress.update(
+      chunkIndex + 1,
+      `Analyzing ${currentChunk.category}...`,
+    );
 
     try {
-      let result: ChunkAnalysisResult | null = null;
+      const analysisResult = await processChunkWithCaching(
+        currentChunk,
+        analysisConfig,
+      );
 
-      // Check cache first
-      const cacheKey = `${chunk.category}_${model}`;
-      if (useCache) {
-        result = cache.get(chunk.files[0]?.content || '', {
-          category: cacheKey,
-        });
-      }
-
-      if (!result) {
-        // Analyze based on category
-        result = await analyzeChunkByCategory(chunk, {
-          model,
-          verbose,
-          timeout,
-        });
-
-        // Cache the result
-        if (useCache && result) {
-          cache.set(chunk.files[0]?.content || '', result, {
-            category: cacheKey,
-          });
-        }
-      }
-
-      // Merge results into analysis
-      mergeAnalysisResults(analysis, result, chunk.category);
+      mergeAnalysisResults(analysis, analysisResult, currentChunk.category);
     } catch (error) {
-      console.error(`\n⚠️  Error analyzing ${chunk.category}:`, error);
-      // Log detailed error information for debugging
-      if (verbose) {
-        console.error('Error details:', {
-          category: chunk.category,
-          filesCount: chunk.files.length,
-          errorMessage: error instanceof Error ? error.message : String(error),
-        });
-      }
-      // Add fallback data for this chunk category
-      mergeAnalysisResults(
+      handleChunkAnalysisError(
+        error,
+        currentChunk,
+        analysisConfig.verbose,
         analysis,
-        getDefaultResultForCategory(chunk.category),
-        chunk.category
       );
     }
   }
 
   progress.complete('Analysis complete!');
-
-  // Fill in any missing fields with defaults
   return fillAnalysisDefaults(analysis);
 }
 
@@ -130,7 +254,10 @@ function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
     case 'dependencies':
       return {
         coreDependencies: [],
-        tsEquivalents: {},
+        packageCategories: {},
+        versionConstraints: {},
+        devDependencies: [],
+        dependencyComplexity: 'low' as const,
       };
     default:
       return {};
@@ -142,7 +269,7 @@ function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
  */
 async function analyzeChunkByCategory(
   chunk: CodeChunk,
-  options: ClaudeOptions
+  options: ClaudeOptions,
 ): Promise<ChunkAnalysisResult | null> {
   const code = chunk.files.map((f) => f.content).join('\n\n');
 
@@ -153,7 +280,7 @@ async function analyzeChunkByCategory(
         code,
         entryPrompt,
         undefined,
-        options
+        options,
       )) as ChunkAnalysisResult;
     }
 
@@ -163,7 +290,7 @@ async function analyzeChunkByCategory(
         code,
         statePrompt,
         undefined,
-        options
+        options,
       )) as ChunkAnalysisResult;
     }
 
@@ -173,7 +300,7 @@ async function analyzeChunkByCategory(
         code,
         componentPrompt,
         undefined,
-        options
+        options,
       )) as ChunkAnalysisResult;
     }
 
@@ -183,7 +310,7 @@ async function analyzeChunkByCategory(
         code,
         servicePrompt,
         undefined,
-        options
+        options,
       )) as ChunkAnalysisResult;
     }
 
@@ -193,7 +320,7 @@ async function analyzeChunkByCategory(
         code,
         depPrompt,
         undefined,
-        options
+        options,
       )) as ChunkAnalysisResult;
     }
 
@@ -203,67 +330,31 @@ async function analyzeChunkByCategory(
 }
 
 /**
- * Merge analysis results from different chunks
+ * Merge analysis results from different chunks using strategy pattern
  */
 function mergeAnalysisResults(
   analysis: Partial<FunctionalAnalysis>,
   result: ChunkAnalysisResult | null,
-  category: string
+  category: string,
 ): void {
   if (!result) {
     return;
   }
 
-  switch (category) {
-    case 'entry':
-      if (result.appPurpose) {
-        analysis.appPurpose = result.appPurpose;
-      }
-      if (result.initialization) {
-        analysis.coreFeatures = result.initialization;
-      }
-      break;
+  const mergeStrategies: Record<
+    string,
+    (analysis: Partial<FunctionalAnalysis>, result: ChunkAnalysisResult) => void
+  > = {
+    entry: mergeEntryResults,
+    state: mergeStateResults,
+    components: mergeComponentResults,
+    services: mergeServiceResults,
+    dependencies: mergeDependencyResults,
+  };
 
-    case 'state':
-      analysis.stateManagement = {
-        pattern: result.middleware?.join(', ') || 'Redux',
-        stateShape: result.stateShape || {},
-        keyActions: result.keyActions || [],
-        selectors: result.selectors || [],
-      };
-      break;
-
-    case 'components':
-      if (result.userFeatures) {
-        analysis.coreFeatures = [
-          ...(analysis.coreFeatures || []),
-          ...result.userFeatures,
-        ];
-      }
-      if (result.interactions) {
-        analysis.userWorkflows = [
-          {
-            name: 'User Interactions',
-            steps: result.interactions,
-          },
-        ];
-      }
-      break;
-
-    case 'services':
-      analysis.dataFlow = {
-        sources: result.dataSource || [],
-        transformations: result.operations || [],
-        destinations: result.dataFormat ? ['API responses'] : [],
-      };
-      break;
-
-    case 'dependencies':
-      analysis.dependencies = {
-        dart: result.coreDependencies || [],
-        tsEquivalents: result.tsEquivalents || {},
-      };
-      break;
+  const mergeStrategy = mergeStrategies[category];
+  if (mergeStrategy) {
+    mergeStrategy(analysis, result);
   }
 }
 
@@ -271,7 +362,7 @@ function mergeAnalysisResults(
  * Fill in default values for missing analysis fields
  */
 function fillAnalysisDefaults(
-  partial: Partial<FunctionalAnalysis>
+  partial: Partial<FunctionalAnalysis>,
 ): FunctionalAnalysis {
   return {
     appPurpose: partial.appPurpose || 'Application purpose not determined',
@@ -305,12 +396,12 @@ function fillAnalysisDefaults(
  */
 export async function comprehensiveAnalysis(
   chunks: CodeChunk[],
-  options: AnalysisOptions = {}
+  options: AnalysisOptions = {},
 ): Promise<FunctionalAnalysis> {
   const { model = 'opus', verbose = false, timeout } = options;
 
   console.log(
-    `\n🚀 Running comprehensive analysis with Claude (${model})...\n`
+    `\n🚀 Running comprehensive analysis with Claude (${model})...\n`,
   );
 
   // Prepare chunks for analysis
@@ -325,12 +416,15 @@ export async function comprehensiveAnalysis(
   const prompt = analysisPrompts.comprehensiveAnalysis(chunkData);
 
   try {
-    const result = await executeClaude(prompt, {
+    const options: ClaudeOptions = {
       model,
       verbose,
       outputFormat: 'json',
-      timeout,
-    });
+    };
+    if (timeout !== undefined) {
+      options.timeout = timeout;
+    }
+    const result = await executeClaude(prompt, options);
 
     if (result.error) {
       throw new Error(result.error);
@@ -347,7 +441,7 @@ export async function comprehensiveAnalysis(
     const cleaned = cleanJsonResponse(
       typeof result.result === 'string'
         ? result.result
-        : JSON.stringify(result.result)
+        : JSON.stringify(result.result),
     );
 
     // Transform comprehensive result to FunctionalAnalysis format
@@ -362,29 +456,26 @@ export async function comprehensiveAnalysis(
  * Transform comprehensive analysis result to FunctionalAnalysis format
  */
 function transformComprehensiveResult(
-  result: ComprehensiveAnalysisResult
+  result: ComprehensiveAnalysisResult,
 ): FunctionalAnalysis {
   return {
     appPurpose: result.summary?.appPurpose || 'Unknown',
     coreFeatures: result.features?.map((f) => f.description) || [],
-    userWorkflows:
-      result.features?.map((f) => ({
-        name: f.name,
-        steps: f.userSteps || [],
-      })) || [],
+    userWorkflows: result.features?.map((f) => ({
+      name: f.name,
+      steps: f.userSteps || [],
+    })) || [],
     dataFlow: result.dataFlow
       ? {
-          sources: result.dataFlow.sources || [],
-          transformations: result.dataFlow.processing || [],
-          destinations: result.dataFlow.storage
-            ? [result.dataFlow.storage]
-            : [],
-        }
+        sources: result.dataFlow.sources || [],
+        transformations: result.dataFlow.processing || [],
+        destinations: result.dataFlow.storage ? [result.dataFlow.storage] : [],
+      }
       : {
-          sources: [],
-          transformations: [],
-          destinations: [],
-        },
+        sources: [],
+        transformations: [],
+        destinations: [],
+      },
     stateManagement: {
       pattern: result.architecture?.pattern || 'Unknown',
       stateShape: {},
@@ -398,12 +489,12 @@ function transformComprehensiveResult(
     },
     dependencies: result.dependencies
       ? {
-          dart: result.dependencies.critical || [],
-          tsEquivalents: {}, // We don't have tsEquivalents in the comprehensive result
-        }
+        dart: result.dependencies.critical || [],
+        tsEquivalents: {}, // Phase 2: Will be determined during migration planning
+      }
       : {
-          dart: [],
-          tsEquivalents: {},
-        },
+        dart: [],
+        tsEquivalents: {}, // Phase 2: Will be determined during migration planning
+      },
   };
 }

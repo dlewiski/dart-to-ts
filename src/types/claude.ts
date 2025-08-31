@@ -48,10 +48,10 @@ export interface ClaudeApiResponse {
 export interface CachedResponse {
   timestamp: number;
   response: unknown;
-  metadata?: {
+  metadata: {
     model?: ClaudeModel;
     category?: string;
-  };
+  } | undefined;
 }
 
 export interface SchemaProperty {

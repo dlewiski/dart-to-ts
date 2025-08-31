@@ -1,10 +1,20 @@
-import * as path from 'path';
-import { Command } from 'commander';
-import { AnalysisService } from './services/analysis-service';
-import { pathExists } from './utils/file-operations';
-import { type CLIOptions } from './types';
+// This file provides exports for programmatic usage
+// The main CLI is in ../main.ts
 
-async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
+import { CLIOptions } from './types/index.ts';
+import { AnalysisService } from './services/analysis-service.ts';
+
+/**
+ * Analyze a Dart/Flutter application programmatically
+ *
+ * @param projectPath Path to the Dart project directory
+ * @param options Analysis options
+ * @returns The functional analysis result
+ */
+export async function analyzeDartApp(
+  projectPath: string,
+  options: CLIOptions = {},
+) {
   const analysisService = new AnalysisService(projectPath);
 
   // Execute analysis workflow
@@ -21,66 +31,7 @@ async function analyzeDartApp(projectPath: string, options: CLIOptions = {}) {
   return result.analysis;
 }
 
-// Run analysis if called directly
-if (require.main === module) {
-  const program = new Command();
-
-  program
-    .name('dart-to-ts-analyzer')
-    .description('Analyze Dart Flutter apps for TypeScript conversion')
-    .version('1.0.0')
-    .argument(
-      '[project-path]',
-      'Path to Dart project directory',
-      path.join(__dirname, '..', '..', 'frontend_release_dashboard')
-    )
-    .option(
-      '-c, --comprehensive',
-      'Use comprehensive analysis (slower but more thorough)',
-      false
-    )
-    .option(
-      '-m, --model <model>',
-      'Choose Claude model: sonnet (default) or opus',
-      'sonnet'
-    )
-    .option('-v, --verbose', 'Show detailed progress and API usage', false)
-    .option('--no-cache', "Don't use cached responses", false)
-    .option(
-      '-t, --timeout <seconds>',
-      'Timeout for analysis in seconds (default: 600)',
-      '600'
-    )
-    .action((projectPath: string, options: any) => {
-      const cliOptions: CLIOptions = {
-        comprehensive: options.comprehensive,
-        verbose: options.verbose,
-        noCache: !options.cache,
-        model: options.model as 'sonnet' | 'opus',
-        timeout: parseInt(options.timeout) * 1000, // Convert seconds to milliseconds
-      };
-
-      // Validate model option
-      if (!['sonnet', 'opus'].includes(cliOptions.model!)) {
-        console.error(
-          `Error: Invalid model "${cliOptions.model}". Use 'sonnet' or 'opus'.`
-        );
-        process.exit(1);
-      }
-
-      // Validate project path exists
-      if (!pathExists(projectPath)) {
-        console.error(`Error: Project path "${projectPath}" does not exist.`);
-        process.exit(1);
-      }
-
-      analyzeDartApp(projectPath, cliOptions).catch((error) => {
-        console.error('Fatal error during analysis:', error);
-        process.exit(1);
-      });
-    });
-
-  program.parse(process.argv);
-}
-
-export { analyzeDartApp };
+// Re-export types for external usage
+export type { CLIOptions, FunctionalAnalysis } from './types/index.ts';
+export { AnalysisService } from './services/analysis-service.ts';
+export { ParallelAnalyzer } from './core/parallel/ParallelAnalyzer.ts';

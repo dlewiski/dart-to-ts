@@ -2,8 +2,8 @@
  * Central export for all type definitions
  */
 
-export * from './analysis';
-export * from './claude';
+export * from './analysis.ts';
+export * from './claude.ts';
 
 // File-related types
 export interface CodeFile {
@@ -35,6 +35,8 @@ export interface CLIOptions {
   verbose?: boolean;
   noCache?: boolean;
   timeout?: number;
+  parallel?: boolean;
+  workers?: number;
 }
 
 // Security constraints
@@ -54,11 +56,7 @@ export const TIMEOUTS = {
 
 // Error types
 export class AnalysisError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public details?: unknown
-  ) {
+  constructor(message: string, public code: string, public details?: unknown) {
     super(message);
     this.name = 'AnalysisError';
   }
@@ -79,10 +77,7 @@ export class TimeoutError extends Error {
 }
 
 export class ValidationError extends Error {
-  constructor(
-    message: string,
-    public field?: string
-  ) {
+  constructor(message: string, public field?: string) {
     super(message);
     this.name = 'ValidationError';
   }

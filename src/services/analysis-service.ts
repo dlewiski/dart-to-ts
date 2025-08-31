@@ -1,19 +1,18 @@
-import * as path from 'path';
-import { scanDartProject } from '../scanner';
-import { extractCodeForAnalysis } from '../extractor';
-import { analyzeFunctionality, comprehensiveAnalysis } from '../analyzer';
+import { join } from '../../deps.ts';
+import { scanDartProject } from '../scanner.ts';
+import { extractCodeForAnalysis } from '../extractor.ts';
+import { analyzeFunctionality, comprehensiveAnalysis } from '../analyzer.ts';
 import {
-  safeWriteJsonFile,
   ensureDirectoryExists,
-} from '../utils/file-operations';
+  safeWriteJsonFile,
+} from '../utils/file-operations.ts';
 import {
-  type CLIOptions,
   type AnalysisOptions,
-  type FunctionalAnalysis,
-  type Workflow,
-  type FileCategories,
+  type CLIOptions,
   type CodeChunk,
-} from '../types';
+  type FileCategories,
+  type FunctionalAnalysis,
+} from '../types/index.ts';
 
 export interface AnalysisResult {
   analysis: FunctionalAnalysis;
@@ -25,6 +24,12 @@ export interface AnalysisReport {
   categoriesPath: string;
   analysisPath: string;
   reportPath: string;
+}
+
+interface OutputDirectories {
+  base: string;
+  raw: string;
+  functional: string;
 }
 
 /**
@@ -39,7 +44,7 @@ export class AnalysisService {
    */
   async analyze(options: CLIOptions = {}): Promise<AnalysisResult> {
     console.log(
-      '🔍 Starting Dart app analysis with Claude Code integration...\n'
+      '🔍 Starting Dart app analysis with Claude Code integration...\n',
     );
 
     // Step 1: Scan and categorize files
@@ -59,68 +64,61 @@ export class AnalysisService {
   }
 
   /**
-   * Save analysis results to files
+   * Save analysis results to files with structured output
    */
   async saveResults(
     result: AnalysisResult,
-    outputDir?: string
+    outputDir?: string,
   ): Promise<AnalysisReport> {
     console.log('\n📊 Generating analysis reports...\n');
 
-    const baseDir = outputDir || path.join(__dirname, '..', '..', 'analysis');
-    const analysisDir = path.resolve(baseDir);
-    const rawDir = path.join(analysisDir, 'raw');
-    const functionalDir = path.join(analysisDir, 'functional');
+    const outputPaths = this.createOutputDirectories(outputDir);
+    const filePaths = await this.saveAllResultFiles(result, outputPaths);
 
-    // Ensure directories exist
-    [analysisDir, rawDir, functionalDir].forEach(ensureDirectoryExists);
-
-    // Save file categories
-    const categoriesPath = path.join(rawDir, 'file-categories.json');
-    this.saveWithErrorHandling(
-      () => safeWriteJsonFile(categoriesPath, result.categories),
-      `File categories saved to: ${categoriesPath}`,
-      'Failed to save file categories'
-    );
-
-    // Save functional analysis
-    const analysisPath = path.join(functionalDir, 'analysis.json');
-    this.saveWithErrorHandling(
-      () => safeWriteJsonFile(analysisPath, result.analysis),
-      `Functional analysis saved to: ${analysisPath}`,
-      'Failed to save functional analysis'
-    );
-
-    // Generate and save human-readable report
-    const report = this.generateReadableReport(result.analysis);
-    const reportPath = path.join(analysisDir, 'report.md');
-    this.saveWithErrorHandling(
-      () => safeWriteJsonFile(reportPath, report),
-      `Readable report saved to: ${reportPath}\n`,
-      'Failed to save report'
-    );
-
-    return { categoriesPath, analysisPath, reportPath };
+    return filePaths;
   }
 
   private scanProject(): FileCategories {
     return scanDartProject(this.projectPath);
   }
 
-  private async extractCode(categories: FileCategories): Promise<CodeChunk[]> {
+  private extractCode(categories: FileCategories): Promise<CodeChunk[]> {
     return extractCodeForAnalysis(this.projectPath, categories);
   }
 
   private async performAnalysis(
     chunks: CodeChunk[],
-    options: CLIOptions
+    options: CLIOptions,
   ): Promise<FunctionalAnalysis> {
     const analysisOptions: AnalysisOptions = {
       model: options.model || 'sonnet',
       verbose: options.verbose || false,
       useCache: !options.noCache,
-      timeout: options.timeout,
     };
+    if (options.timeout !== undefined) {
+      analysisOptions.timeout = options.timeout;
+    }
+
+    // Use parallel processing if enabled
+    if (options.parallel) {
+      const { ParallelAnalyzer } = await import(
+        '../core/parallel/ParallelAnalyzer.ts'
+      );
+      const parallelAnalyzer = new ParallelAnalyzer({
+        ...analysisOptions,
+        maxWorkers: options.workers || 4,
+        useWorkers: false, // Use simulated parallel for now
+      });
+
+      console.log(
+        `🚀 Using parallel processing with ${options.workers || 4} workers\n`,
+      );
+
+      const result = await parallelAnalyzer.analyzeFunctionality(chunks);
+      await parallelAnalyzer.shutdown();
+
+      return result;
+    }
 
     if (options.comprehensive) {
       return comprehensiveAnalysis(chunks, analysisOptions);
@@ -138,74 +136,141 @@ export class AnalysisService {
   - Entry point: ${categories.entry || 'not found'}\n`);
   }
 
-  private saveWithErrorHandling(
-    saveOperation: () => void,
+  /**
+   * Create and ensure output directory structure exists
+   */
+  private createOutputDirectories(outputDir?: string): OutputDirectories {
+    const baseDir = outputDir || join(Deno.cwd(), 'analysis');
+    const directories = {
+      base: baseDir,
+      raw: join(baseDir, 'raw'),
+      functional: join(baseDir, 'functional'),
+    };
+
+    // Ensure all directories exist
+    Object.values(directories).forEach(ensureDirectoryExists);
+
+    return directories;
+  }
+
+  /**
+   * Save all result files and return their paths
+   */
+  private async saveAllResultFiles(
+    result: AnalysisResult,
+    directories: OutputDirectories,
+  ): Promise<AnalysisReport> {
+    const categoriesPath = join(directories.raw, 'file-categories.json');
+    const analysisPath = join(directories.functional, 'analysis.json');
+    const reportPath = join(directories.base, 'report.md');
+
+    // Save file categories
+    await this.saveWithErrorHandling(
+      () => safeWriteJsonFile(categoriesPath, result.categories),
+      `File categories saved to: ${categoriesPath}`,
+      'Failed to save file categories',
+    );
+
+    // Save functional analysis
+    await this.saveWithErrorHandling(
+      () => safeWriteJsonFile(analysisPath, result.analysis),
+      `Functional analysis saved to: ${analysisPath}`,
+      'Failed to save functional analysis',
+    );
+
+    // Generate and save human-readable report
+    const report = this.generateReadableReport(result.analysis);
+    await this.saveWithErrorHandling(
+      async () => {
+        await Deno.writeTextFile(reportPath, report);
+      },
+      `Readable report saved to: ${reportPath}\n`,
+      'Failed to save report',
+    );
+
+    return { categoriesPath, analysisPath, reportPath };
+  }
+
+  /**
+   * Save operation with proper error handling and logging
+   */
+  private async saveWithErrorHandling(
+    saveOperation: () => Promise<void> | void,
     successMessage: string,
-    errorMessage: string
-  ): void {
+    errorMessage: string,
+  ): Promise<void> {
     try {
-      saveOperation();
+      await saveOperation();
       console.log(`✅ ${successMessage}`);
     } catch (error) {
+      const errorDetails = error instanceof Error
+        ? error.message
+        : String(error);
       console.error(`❌ ${errorMessage}:`, error);
-      throw new Error(
-        `${errorMessage}: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new Error(`${errorMessage}: ${errorDetails}`);
     }
   }
 
+  /**
+   * Generate comprehensive human-readable analysis report
+   */
   private generateReadableReport(analysis: FunctionalAnalysis): string {
-    return `# Dart Application Functional Analysis Report
+    // Generate markdown report from analysis
+    const report: string[] = [];
 
-## Application Purpose
-${analysis.appPurpose}
+    report.push('# Dart Application Analysis Report\n');
+    report.push(`## Application Purpose\n${analysis.appPurpose}\n`);
 
-## Core Features
-${analysis.coreFeatures.map((f: string) => `- ${f}`).join('\n')}
+    if (analysis.coreFeatures.length > 0) {
+      report.push('## Core Features\n');
+      analysis.coreFeatures.forEach((feature) => {
+        report.push(`- ${feature}`);
+      });
+      report.push('');
+    }
 
-## User Workflows
-${analysis.userWorkflows
-  .map(
-    (w: Workflow) => `
-### ${w.name}
-${w.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
-  )
-  .join('\n')}
+    if (analysis.userWorkflows.length > 0) {
+      report.push('## User Workflows\n');
+      analysis.userWorkflows.forEach((workflow) => {
+        report.push(`### ${workflow.name}`);
+        workflow.steps.forEach((step) => {
+          report.push(`1. ${step}`);
+        });
+        report.push('');
+      });
+    }
 
-## Data Architecture
-### Sources
-${analysis.dataFlow.sources.map((s: string) => `- ${s}`).join('\n')}
+    report.push('## State Management\n');
+    report.push(`- Pattern: ${analysis.stateManagement.pattern}`);
+    report.push(
+      `- Key Actions: ${
+        analysis.stateManagement.keyActions.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('');
 
-### Transformations
-${analysis.dataFlow.transformations.map((t: string) => `- ${t}`).join('\n')}
+    report.push('## Data Flow\n');
+    report.push(
+      `- Sources: ${analysis.dataFlow.sources.join(', ') || 'None identified'}`,
+    );
+    report.push(
+      `- Transformations: ${
+        analysis.dataFlow.transformations.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('');
 
-### Destinations
-${analysis.dataFlow.destinations.map((d: string) => `- ${d}`).join('\n')}
+    report.push('## Dependencies\n');
+    report.push(
+      `- Dart packages: ${
+        analysis.dependencies.dart.join(', ') || 'None identified'
+      }`,
+    );
+    report.push('\n---\n');
+    report.push(
+      '*Note: TypeScript migration strategies will be determined in Phase 2*',
+    );
 
-## State Management
-- **Pattern**: ${analysis.stateManagement.pattern}
-- **Key Actions**: ${analysis.stateManagement.keyActions.join(', ')}
-- **Selectors**: ${analysis.stateManagement.selectors.join(', ')}
-
-## Business Logic
-### Rules
-${analysis.businessLogic.rules.map((r: string) => `- ${r}`).join('\n')}
-
-### Validations
-${analysis.businessLogic.validations.map((v: string) => `- ${v}`).join('\n')}
-
-## Dependency Mapping
-${Object.entries(analysis.dependencies.tsEquivalents)
-  .map(([dart, ts]) => `- **${dart}** → ${ts}`)
-  .join('\n')}
-
-## Conversion Strategy
-Based on this analysis, the TypeScript conversion should:
-1. Implement Redux Toolkit for state management
-2. Use React functional components with hooks
-3. Create TypeScript interfaces for all data models
-4. Implement service layer with Axios
-5. Maintain existing business logic and validations
-`;
+    return report.join('\n');
   }
 }
