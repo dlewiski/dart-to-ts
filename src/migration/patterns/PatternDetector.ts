@@ -34,25 +34,4 @@ export class PatternDetector {
   detectPatterns(/* analysis: FunctionalAnalysis */): void {
     throw new Error('PatternDetector - Not yet implemented');
   }
-
-  /**
-   * Detect state management patterns
-   */
-  private detectStatePatterns(): void {
-    throw new Error('State pattern detection - Not yet implemented');
-  }
-
-  /**
-   * Detect component architecture patterns
-   */
-  private detectComponentPatterns(): void {
-    throw new Error('Component pattern detection - Not yet implemented');
-  }
-
-  /**
-   * Detect service layer patterns
-   */
-  private detectServicePatterns(): void {
-    throw new Error('Service pattern detection - Not yet implemented');
-  }
 }

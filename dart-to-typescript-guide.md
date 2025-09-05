@@ -280,10 +280,6 @@ export class DependencyMapper {
       ],
       notes: 'Core React 18 dependencies with TypeScript support',
     },
-    'flutter': {
-      npm: ['react@18', 'react-dom@18'],
-      notes: 'Flutter maps to React for web',
-    },
 
     // Redux ecosystem (using RTK)
     'built_redux': {

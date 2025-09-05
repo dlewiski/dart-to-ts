@@ -2,7 +2,7 @@
 
 ## Quick Reference Guide
 
-This document provides comprehensive mapping tables and patterns for converting Dart/Flutter applications to React 18 + TypeScript. Use this as a reference during conversion.
+This document provides comprehensive mapping tables and patterns for converting Dart web applications to React 18 + TypeScript. Use this as a reference during conversion.
 
 ## Type Mappings
 

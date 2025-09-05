@@ -40,24 +40,4 @@ export class StrategyAnalyzer {
   analyzeStrategy(/* analysis: FunctionalAnalysis */): void {
     throw new Error('StrategyAnalyzer - Not yet implemented');
   }
-
-  /**
-   * Evaluate architectural patterns from Dart code
-   *
-   * @param analysis - Phase 1 analysis
-   * @returns Recommended TypeScript architecture
-   */
-  private evaluateArchitecture(/* analysis: FunctionalAnalysis */): void {
-    throw new Error('Architecture evaluation - Not yet implemented');
-  }
-
-  /**
-   * Analyze dependency migration requirements
-   *
-   * @param dependencies - Dart dependencies from Phase 1
-   * @returns TypeScript dependency recommendations
-   */
-  private analyzeDependencies(/* dependencies: Dependencies */): void {
-    throw new Error('Dependency analysis - Not yet implemented');
-  }
 }

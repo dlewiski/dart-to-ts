@@ -7,6 +7,7 @@ import {
   ProgressIndicator,
   ResponseCache,
 } from './utils/claude-utils.ts';
+import { LLMService } from './services/llm-service.ts';
 import {
   type AnalysisOptions,
   type ChunkAnalysisResult,
@@ -18,6 +19,7 @@ import {
 
 // Initialize cache with default duration (will be replaced with configurable cache)
 let cache = new ResponseCache('.claude-cache', 120); // 2 hour default
+let llmService: LLMService | null = null;
 
 /**
  * Extract and validate analysis configuration from options
@@ -28,16 +30,30 @@ interface AnalysisConfig {
   model: 'sonnet' | 'opus';
   timeout: number | undefined;
   cacheDuration: number;
+  provider?: 'claude' | 'ollama' | 'parallel';
+  ollamaModel?: string;
+  ollamaUrl?: string;
+  parallelProviders?: string[];
+  aggregation?: 'first' | 'consensus' | 'best' | 'all';
 }
 
 function extractAnalysisConfig(options: AnalysisOptions): AnalysisConfig {
-  const config = {
+  const config: AnalysisConfig = {
     useCache: options.useCache ?? true,
     verbose: options.verbose ?? false,
     model: options.model ?? 'sonnet',
     timeout: options.timeout ?? undefined,
     cacheDuration: options.cacheDuration ?? 120,
   };
+
+  // Only add optional properties if they are defined
+  if (options.provider) config.provider = options.provider;
+  if (options.ollamaModel) config.ollamaModel = options.ollamaModel;
+  if (options.ollamaUrl) config.ollamaUrl = options.ollamaUrl;
+  if (options.parallelProviders) {
+    config.parallelProviders = options.parallelProviders;
+  }
+  if (options.aggregation) config.aggregation = options.aggregation;
 
   // Update cache with new duration if it has changed
   // Note: ResponseCache doesn't expose ttlMinutes, so we'll create a new instance
@@ -76,7 +92,7 @@ async function processChunkWithCaching(
     claudeOptions.timeout = config.timeout;
   }
 
-  const result = await analyzeChunkByCategory(chunk, claudeOptions);
+  const result = await analyzeChunkByCategory(chunk, claudeOptions, config);
 
   // Cache the result
   if (config.useCache && result) {
@@ -265,14 +281,51 @@ function getDefaultResultForCategory(category: string): ChunkAnalysisResult {
 }
 
 /**
+ * Get analysis prompt by category
+ */
+function getAnalysisPromptByCategory(category: string, code: string): string {
+  switch (category) {
+    case 'entry':
+      return analysisPrompts.appFunctionality(code);
+    case 'state':
+      return analysisPrompts.stateStructure(code);
+    case 'components':
+      return analysisPrompts.componentFunctionality(code);
+    case 'services':
+      return analysisPrompts.serviceLayer(code);
+    case 'dependencies':
+      return analysisPrompts.dependencies(code);
+    default:
+      return 'Analyze this code and describe its functionality';
+  }
+}
+
+/**
  * Analyze a specific chunk based on its category
  */
 async function analyzeChunkByCategory(
   chunk: CodeChunk,
   options: ClaudeOptions,
+  config?: AnalysisConfig,
 ): Promise<ChunkAnalysisResult | null> {
   const code = chunk.files.map((f) => f.content).join('\n\n');
 
+  // Use LLM service if provider is specified
+  if (config?.provider && config.provider !== 'claude') {
+    if (!llmService) {
+      llmService = new LLMService(config as AnalysisOptions);
+      await llmService.initialize();
+    }
+
+    const analysisType = getAnalysisPromptByCategory(chunk.category, code);
+    return (await llmService.analyzeCode(
+      code,
+      analysisType,
+      undefined,
+    )) as ChunkAnalysisResult;
+  }
+
+  // Default to original Claude CLI implementation
   switch (chunk.category) {
     case 'entry': {
       const entryPrompt = analysisPrompts.appFunctionality(code);

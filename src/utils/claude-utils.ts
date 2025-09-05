@@ -305,3 +305,40 @@ export function extractUsageInfo(jsonResponse: unknown): UsageInfo {
 
   return result;
 }
+
+/**
+ * Extract and validate JSON from LLM response text
+ */
+export function extractAndValidateJson(text: string): unknown {
+  // Try to extract JSON from markdown code blocks
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) ||
+    text.match(/```\n?([\s\S]*?)\n?```/) ||
+    text.match(/({[\s\S]*})/);
+
+  if (jsonMatch && jsonMatch[1]) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      // Basic validation - ensure it's an object
+      if (typeof parsed === 'object' && parsed !== null) {
+        return parsed;
+      }
+    } catch (e) {
+      console.warn('[JSON Extract] Failed to parse JSON from code block:', e);
+    }
+  }
+
+  // Try direct JSON parse as last resort
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
+    }
+  } catch {
+    // Return the raw text if all parsing attempts fail
+    console.warn(
+      '[JSON Extract] Could not parse JSON from response, returning raw text',
+    );
+  }
+
+  return text;
+}

@@ -1,6 +1,6 @@
 # Dart to TypeScript Analyzer - Deno Edition
 
-A modern Deno application that analyzes Dart Flutter/web applications and provides comprehensive insights for TypeScript conversion planning. Built with TypeScript, Deno's secure runtime, and Claude AI for intelligent code analysis.
+A modern Deno application that analyzes Dart web applications and provides comprehensive insights for TypeScript conversion planning. Built with TypeScript, Deno's secure runtime, and Claude AI for intelligent code analysis.
 
 ## 🚀 Features
 
@@ -15,7 +15,7 @@ A modern Deno application that analyzes Dart Flutter/web applications and provid
 
 - [Deno](https://deno.com/) 2.0 or higher
 - [Claude CLI](https://github.com/anthropics/claude-cli) installed and configured
-- A Dart Flutter/web project to analyze
+- A Dart web project to analyze
 
 ## Installation
 

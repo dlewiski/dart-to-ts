@@ -1,7 +1,7 @@
 // deps.ts - All dependencies in one place (Deno best practice)
 
 // Deno Standard Library
-export { basename, dirname, extname, join, resolve } from '@std/path';
+export { basename, dirname, extname, join, relative, resolve } from '@std/path';
 export { ensureDir, exists, walk, walkSync } from '@std/fs';
 export { assertEquals, assertExists, assertRejects } from '@std/assert';
 export { afterEach, beforeEach, describe, it } from '@std/testing/bdd';

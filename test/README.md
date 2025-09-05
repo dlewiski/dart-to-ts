@@ -16,7 +16,7 @@ This directory contains the refactored test suite for the parallel processing fu
 
 - **`test-fixtures.ts`** - Reusable mock data and chunk generators
   - `createMockChunks()` - Generate simple test chunks
-  - `createRealisticChunks()` - Generate realistic Flutter/Dart code chunks
+  - `createRealisticChunks()` - Generate realistic Dart web code chunks
 
 - **`mock-analyzer.ts`** - Mock implementations for unit testing
   - `MockParallelAnalyzer` - Mock analyzer for isolated testing

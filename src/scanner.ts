@@ -1,4 +1,4 @@
-import { join } from '../deps.ts';
+import { join, relative, resolve } from '../deps.ts';
 import { getStats, readDirectory } from './utils/file-operations.ts';
 import { type FileCategories } from './types/index.ts';
 
@@ -106,7 +106,10 @@ class ProjectScanner {
    * Get relative path from project root
    */
   private getRelativePath(fullPath: string): string {
-    return fullPath.replace(this.projectPath + '/', '');
+    // Use standard library's relative function for proper path resolution
+    const absoluteProjectPath = resolve(this.projectPath);
+    const absoluteFullPath = resolve(fullPath);
+    return relative(absoluteProjectPath, absoluteFullPath);
   }
 
   /**

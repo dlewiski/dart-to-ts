@@ -33,32 +33,4 @@ export class PatternMapper {
   mapPatterns(/* detectedPatterns: DetectedPatterns */): void {
     throw new Error('PatternMapper - Not yet implemented');
   }
-
-  /**
-   * Map state management patterns
-   */
-  private mapStateManagementPatterns(): void {
-    throw new Error('State management mapping - Not yet implemented');
-  }
-
-  /**
-   * Map component patterns
-   */
-  private mapComponentPatterns(): void {
-    throw new Error('Component pattern mapping - Not yet implemented');
-  }
-
-  /**
-   * Map service layer patterns
-   */
-  private mapServicePatterns(): void {
-    throw new Error('Service pattern mapping - Not yet implemented');
-  }
-
-  /**
-   * Map business logic patterns
-   */
-  private mapBusinessLogicPatterns(): void {
-    throw new Error('Business logic mapping - Not yet implemented');
-  }
 }

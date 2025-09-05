@@ -5,7 +5,7 @@ import { CLIOptions } from './types/index.ts';
 import { AnalysisService } from './services/analysis-service.ts';
 
 /**
- * Analyze a Dart/Flutter application programmatically
+ * Analyze a Dart web application programmatically
  *
  * @param projectPath Path to the Dart project directory
  * @param options Analysis options

@@ -89,6 +89,13 @@ function createCLIOptions(options: Record<string, unknown>): CLIOptions {
     timeout: (options.timeout as number) * 1000, // Convert seconds to milliseconds
     parallel: options.parallel as boolean,
     workers: options.workers as number,
+    provider: validateProviderOption(options.provider as string),
+    ollamaModel: options.ollamaModel as string,
+    ollamaUrl: options.ollamaUrl as string,
+    parallelProviders: parseParallelProviders(
+      options.parallelProviders as string,
+    ),
+    aggregation: validateAggregationOption(options.aggregation as string),
   };
 }
 
@@ -110,11 +117,59 @@ function validateModelOption(modelInput: string): 'sonnet' | 'opus' {
   return modelInput;
 }
 
+/**
+ * Validate provider option
+ */
+function validateProviderOption(
+  provider?: string,
+): 'claude' | 'ollama' | 'parallel' | undefined {
+  if (!provider) return undefined;
+
+  if (
+    provider !== 'claude' && provider !== 'ollama' && provider !== 'parallel'
+  ) {
+    throw new Error(
+      `Invalid provider "${provider}". Use 'claude', 'ollama', or 'parallel'.`,
+    );
+  }
+
+  return provider;
+}
+
+/**
+ * Validate aggregation strategy option
+ */
+function validateAggregationOption(
+  aggregation?: string,
+): 'first' | 'consensus' | 'best' | 'all' | undefined {
+  if (!aggregation) return undefined;
+
+  if (
+    aggregation !== 'first' && aggregation !== 'consensus' &&
+    aggregation !== 'best' && aggregation !== 'all'
+  ) {
+    throw new Error(
+      `Invalid aggregation "${aggregation}". Use 'first', 'consensus', 'best', or 'all'.`,
+    );
+  }
+
+  return aggregation;
+}
+
+/**
+ * Parse parallel providers from comma-separated string
+ */
+function parseParallelProviders(providers?: string): string[] | undefined {
+  if (!providers) return undefined;
+
+  return providers.split(',').map((p) => p.trim()).filter((p) => p.length > 0);
+}
+
 // Main CLI entry point
 if (import.meta.main) {
   const program = new Command()
     .name('dart-to-ts-analyzer')
-    .description('Analyze Dart Flutter apps for TypeScript conversion')
+    .description('Analyze Dart web apps for TypeScript conversion')
     .version('2.0.0')
     .arguments('[project-path]')
     .option(
@@ -145,6 +200,28 @@ if (import.meta.main) {
       '-w, --workers <count:number>',
       'Number of parallel workers (default: 4)',
       { default: 4 },
+    )
+    .option(
+      '--provider <provider:string>',
+      'LLM provider: claude (default), ollama, or parallel',
+      { default: 'claude' },
+    )
+    .option(
+      '--ollama-model <model:string>',
+      'Ollama model to use (default: qwen2.5-coder)',
+    )
+    .option(
+      '--ollama-url <url:string>',
+      'Ollama server URL (default: http://localhost:11434)',
+    )
+    .option(
+      '--parallel-providers <providers:string>',
+      'Comma-separated list of providers for parallel execution',
+    )
+    .option(
+      '--aggregation <strategy:string>',
+      'Aggregation strategy for parallel: first, consensus, best, or all',
+      { default: 'consensus' },
     )
     .action(async (options, projectPath?: string) => {
       try {

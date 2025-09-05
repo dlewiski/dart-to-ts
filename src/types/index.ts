@@ -4,6 +4,7 @@
 
 export * from './analysis.ts';
 export * from './claude.ts';
+export * from './llm.ts';
 
 // File-related types
 export interface CodeFile {
@@ -37,6 +38,11 @@ export interface CLIOptions {
   timeout?: number;
   parallel?: boolean;
   workers?: number;
+  provider?: 'claude' | 'ollama' | 'parallel';
+  ollamaModel?: string;
+  ollamaUrl?: string;
+  parallelProviders?: string[];
+  aggregation?: 'first' | 'consensus' | 'best' | 'all';
 }
 
 // Security constraints

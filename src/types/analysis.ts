@@ -150,4 +150,9 @@ export interface AnalysisOptions {
   timeout?: number;
   /** Cache duration in minutes (default: 120) */
   cacheDuration?: number;
+  provider?: 'claude' | 'ollama' | 'parallel';
+  ollamaModel?: string;
+  ollamaUrl?: string;
+  parallelProviders?: string[];
+  aggregation?: 'first' | 'consensus' | 'best' | 'all';
 }

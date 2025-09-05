@@ -6,8 +6,8 @@
   "exports": "./main.ts",
 
   "tasks": {
-    "dev": "deno run --watch --allow-read --allow-write --allow-env --allow-net main.ts",
-    "start": "deno run --allow-read --allow-write --allow-env --allow-net main.ts",
+    "dev": "deno run --watch --allow-read --allow-write --allow-env --allow-net --allow-run main.ts",
+    "start": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run main.ts",
     "test": "deno test --allow-read --allow-write --allow-env --allow-run",
     "test:watch": "deno test --watch --allow-read --allow-write --allow-env --allow-run",
     "lint": "deno lint",

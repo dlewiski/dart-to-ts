@@ -95,6 +95,15 @@ export class AnalysisService {
       verbose: options.verbose || false,
       useCache: !options.noCache,
     };
+
+    // Only add optional properties if they are defined
+    if (options.provider) analysisOptions.provider = options.provider;
+    if (options.ollamaModel) analysisOptions.ollamaModel = options.ollamaModel;
+    if (options.ollamaUrl) analysisOptions.ollamaUrl = options.ollamaUrl;
+    if (options.parallelProviders) {
+      analysisOptions.parallelProviders = options.parallelProviders;
+    }
+    if (options.aggregation) analysisOptions.aggregation = options.aggregation;
     if (options.timeout !== undefined) {
       analysisOptions.timeout = options.timeout;
     }

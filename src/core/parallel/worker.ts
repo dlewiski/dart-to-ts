@@ -71,7 +71,7 @@ async function analyzeChunk(
       default:
         // Generic analysis for unknown categories
         prompt =
-          `Analyze this ${chunk.category} code from a Flutter application.
+          `Analyze this ${chunk.category} code from a Dart web application.
 ${chunk.context ? `Context: ${chunk.context}\n` : ''}
 
 Please identify:
