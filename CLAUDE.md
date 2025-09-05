@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Focus
+
+**IMPORTANT**: This project exclusively analyzes and migrates **Dart web applications** to React 18 + TypeScript. We do NOT handle Flutter, mobile applications, or any non-web Dart projects. All patterns, analysis, and migration strategies are specifically tailored for web-to-web transformation.
+
 ## Development Commands
 
 ```bash
@@ -31,7 +35,7 @@ deno task precommit               # Manual pre-commit check
 
 ## Core Architecture
 
-This is a **Deno-based TypeScript application** that analyzes Dart Flutter/web projects and generates migration plans to React 18 + TypeScript. The system operates in phases:
+This is a **Deno-based TypeScript application** that analyzes Dart web projects and generates migration plans to React 18 + TypeScript. The system operates in phases:
 
 ### Phase 1: Functional Analysis
 
@@ -152,24 +156,25 @@ Uses **Deno's built-in test runner**:
 
 ## Migration Patterns
 
-The analyzer recognizes these Dart → TypeScript patterns:
+The analyzer recognizes these Dart web → TypeScript patterns:
 
-### State Management
+### State Management (Web-Specific)
 
-- **Provider** → Redux Toolkit + React Redux
-- **Bloc** → Custom RTK slices
-- **StreamBuilder** → useQuery (RTK Query)
+- **Redux/built_redux** → Redux Toolkit + React Redux
+- **OverReact state** → React hooks + Context API
+- **Dart streams** → RxJS or React Query
 
-### Components
+### Components (Web-Specific)
 
-- **StatefulWidget** → React.FC with hooks
-- **StatelessWidget** → Pure React.FC
-- **FutureBuilder** → Suspense + useQuery
+- **OverReact components** → React.FC with TypeScript
+- **AngularDart components** → React components
+- **Web Components** → React components with proper encapsulation
 
-### Routing
+### Routing (Web-Specific)
 
-- **go_router** → React Router v6
-- **MaterialApp** → App component with Router
+- **AngularDart Router** → React Router v6
+- **Custom Dart web routers** → React Router v6
+- **Browser history API** → React Router with proper history management
 
 ### Internal/Private Dependencies
 
