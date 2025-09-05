@@ -171,6 +171,29 @@ The analyzer recognizes these Dart → TypeScript patterns:
 - **go_router** → React Router v6
 - **MaterialApp** → App component with Router
 
+### Internal/Private Dependencies
+
+**IMPORTANT**: When analyzing Dart projects, identify and handle internal company dependencies:
+
+- **Design Systems** (e.g., `unify` → Material-UI wrapper): Use Material-UI + custom theme as placeholder
+- **Internal Libraries** (company-specific packages): Create placeholder interfaces/types
+- **Private APIs** (internal service packages): Mock with standard REST/GraphQL patterns
+- **Company Tools** (build tools, utilities): Replace with standard npm equivalents
+
+**Actions to take**:
+
+1. **Flag for Review**: Mark any dependency that appears company-internal (not in pub.dev)
+2. **Reasonable Placeholders**: Provide functional alternatives (e.g., unify → @mui/material)
+3. **Documentation**: Note these dependencies require manual review in analysis output
+4. **TODO Comments**: Add clear TODO comments in generated code for manual replacement
+
+**Common Internal Patterns**:
+
+- Design system packages → Material-UI
+- Internal state management → Standard Redux Toolkit
+- Company API clients → Axios with typed interfaces
+- Build/deployment tools → Standard Vite configurations
+
 ## Output Structure
 
 Analysis generates structured output in `analysis/`:
