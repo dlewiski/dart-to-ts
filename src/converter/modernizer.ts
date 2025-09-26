@@ -30,7 +30,7 @@ export class Modernizer {
 
   private modernizeAsyncPatterns(code: string): { code: string; reduction: number } {
     let reduction = 0;
-    let modernized = code;
+    const modernized = code;
 
     // Replace Promise.then with async/await where possible
     const thenPattern = /\.then\s*\(\s*\((.+?)\)\s*=>\s*{([^}]+)}\s*\)/g;
@@ -101,7 +101,7 @@ export class Modernizer {
     let modernized = code;
 
     // Use class fields instead of constructor assignment
-    const constructorPattern = /constructor\([^)]*\)\s*{\s*this\.(\w+)\s*=\s*(\w+);\s*}/g;
+    // const constructorPattern = /constructor\([^)]*\)\s*{\s*this\.(\w+)\s*=\s*(\w+);\s*}/g;
     // Note: This would need more sophisticated parsing
 
     // Use private fields (#)
@@ -123,7 +123,7 @@ export class Modernizer {
     let modernized = code;
 
     // Use named imports instead of wildcard
-    const wildcardPattern = /import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g;
+    // const wildcardPattern = /import\s+\*\s+as\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g;
     // Note: Would need to analyze usage to determine specific imports
 
     // Sort imports
@@ -141,7 +141,7 @@ export class Modernizer {
 
   private modernizeTypeAnnotations(code: string): { code: string; reduction: number } {
     let reduction = 0;
-    let modernized = code;
+    const modernized = code;
 
     // Replace any with specific types where obvious
     const anyPattern = /:\s*any\b/g;
@@ -152,7 +152,7 @@ export class Modernizer {
     }
 
     // Use type guards
-    const typeCheckPattern = /typeof\s+(\w+)\s*===\s*['"](\w+)['"]/g;
+    // const typeCheckPattern = /typeof\s+(\w+)\s*===\s*['"](\w+)['"]/g;
     // Could suggest type guard functions
 
     // Use const assertions
@@ -215,7 +215,7 @@ export class Modernizer {
     let modernized = code;
 
     // Replace || with ?? for null/undefined checks
-    const orPattern = /(\w+)\s*!==\s*null\s*&&\s*\1\s*!==\s*undefined\s*\?\s*\1\s*:/g;
+    // const orPattern = /(\w+)\s*!==\s*null\s*&&\s*\1\s*!==\s*undefined\s*\?\s*\1\s*:/g;
     // This pattern would need refinement
 
     // Replace ternary with nullish coalescing

@@ -2,16 +2,16 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { loadConfig } from '../config/settings.js';
 import { LLMPrompt, LLMResponse } from '../types.js';
 import { PromptBuilder } from './prompt-builder.js';
-import { PackageDecisionMaker } from './package-decisions.js';
+// import { PackageDecisionMaker } from './package-decisions.js';
 
 export { PromptBuilder } from './prompt-builder.js';
-export { PackageDecisionMaker } from './package-decisions.js';
+// export { PackageDecisionMaker } from './package-decisions.js';
 
 export class IntelligenceService {
   private client: BedrockRuntimeClient;
   private config = loadConfig();
   private promptBuilder = new PromptBuilder();
-  private decisionMaker = new PackageDecisionMaker();
+  // private decisionMaker = new PackageDecisionMaker(); // Not used yet
 
   constructor() {
     this.client = new BedrockRuntimeClient({
@@ -24,7 +24,7 @@ export class IntelligenceService {
     });
   }
 
-  async enhanceCode(typescript: string, filePath: string): Promise<LLMResponse> {
+  async enhanceCode(typescript: string, _filePath: string): Promise<LLMResponse> {
     const prompt = this.promptBuilder.buildCodeEnhancementPrompt(typescript);
     return this.invokeLLM(prompt);
   }

@@ -68,7 +68,7 @@ export class TechDebtDetector {
 
     // Check for missing error handling
     const tryBlocks = (content.match(/\btry\s*{/g) || []).length;
-    const catchBlocks = (content.match(/\bcatch\s*\(/g) || []).length;
+    // const catchBlocks = (content.match(/\bcatch\s*\(/g) || []).length; // Not used yet
     const asyncFunctions = (content.match(/\basync\s+/g) || []).length;
 
     if (asyncFunctions > 0 && tryBlocks < asyncFunctions / 3) {

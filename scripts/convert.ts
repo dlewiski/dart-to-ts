@@ -151,7 +151,7 @@ program
       const packageReporter = new PackageReporter();
 
       // Get tech debt patterns from first result
-      const firstResult = Array.from(results.values())[0];
+      const _firstResult = Array.from(results.values())[0];
       const techDebtPatterns: any[] = []; // Would come from analysis
 
       await debtReporter.generateReport(techDebtPatterns, results, config.decisionsPath);
@@ -189,7 +189,7 @@ function extractExports(content: string): string[] {
   return exports;
 }
 
-async function analyzeDryRun(files: DartFile[], config: ConversionConfig) {
+async function analyzeDryRun(files: DartFile[], _config: ConversionConfig) {
   const { Analyzer } = await import('../src/analyzer/index.js');
   const { PackageDecisionMaker } = await import('../src/intelligence/index.js');
 
@@ -225,7 +225,7 @@ function printConversionSummary(
   successCount: number,
   failCount: number,
   decisions: any[],
-  config: ConversionConfig
+  _config: ConversionConfig
 ) {
   console.log('\n' + chalk.cyan('═'.repeat(60)));
   console.log(chalk.cyan.bold('🚀 Conversion Complete'));

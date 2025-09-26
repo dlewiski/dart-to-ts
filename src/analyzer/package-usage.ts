@@ -131,7 +131,7 @@ export class PackageUsageAnalyzer {
 
   private detectUsagePatterns(content: string, usage: PackageUsage) {
     // Look for common patterns from known packages
-    const patterns = {
+    const patterns: Record<string, string[]> = {
       'over_react': ['Dom.', 'uiFunction', 'uiForwardRef', 'Props', 'State'],
       'w_flux': ['Store', 'Actions', 'FluxComponent'],
       'built_value': ['Built', 'Builder', 'Serializer'],

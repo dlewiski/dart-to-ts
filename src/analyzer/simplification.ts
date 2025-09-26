@@ -65,7 +65,7 @@ export class SimplificationAnalyzer {
     return utilities;
   }
 
-  private isSimpleFunction(funcName: string, files: DartFile[]): boolean {
+  private isSimpleFunction(funcName: string, _files: DartFile[]): boolean {
     // Common simple utility functions that can be easily extracted
     const simplePatterns = [
       'dispose', 'validate', 'format', 'parse', 'convert',
@@ -77,7 +77,7 @@ export class SimplificationAnalyzer {
     );
   }
 
-  private isSimpleClass(className: string, files: DartFile[]): boolean {
+  private isSimpleClass(className: string, _files: DartFile[]): boolean {
     // Common simple classes that can be extracted
     const simpleClasses = [
       'Disposable', 'Observable', 'Manager', 'Handler',
