@@ -85,7 +85,7 @@ export class Analyzer {
   private calculateSavings(
     packages: PackageUsage[],
     techDebt: any[],
-    simplifications: Map<string, any>
+    _simplifications: Map<string, any>
   ) {
     const eliminatable = packages.filter(p => p.complexity === 'trivial').length;
     const inlinable = packages.filter(p => p.complexity === 'simple').length;
@@ -94,7 +94,7 @@ export class Analyzer {
       dependencies: eliminatable + inlinable,
       linesOfCode: techDebt.reduce((sum, d) => sum + d.occurrences * 10, 0), // Rough estimate
       complexity: packages.reduce((sum, p) => {
-        const weights = { trivial: 1, simple: 2, moderate: 5, complex: 10 };
+        const weights: Record<string, number> = { trivial: 1, simple: 2, moderate: 5, complex: 10 };
         return sum + weights[p.complexity];
       }, 0),
     };

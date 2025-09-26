@@ -7,7 +7,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { Analyzer } from '../src/analyzer/index.js';
 import { DartFile } from '../src/types.js';
-import { fileExtensions, ignoredPaths } from '../src/config/settings.js';
+import { ignoredPaths } from '../src/config/settings.js';
 
 const program = new Command();
 

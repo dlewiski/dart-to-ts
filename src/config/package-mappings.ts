@@ -5,7 +5,7 @@ export interface PackageStrategy {
   extractPatterns?: string[];
 }
 
-export const packageStrategies: Record<string, Partial<PackageStrategy>> = {
+export const packageStrategies: Record<string, any> = {
   // Packages to eliminate completely (build tools, dev dependencies)
   eliminate: {
     'dart_dev': true,
@@ -98,7 +98,7 @@ export const packageStrategies: Record<string, Partial<PackageStrategy>> = {
 
 export function getPackageStrategy(packageName: string): PackageStrategy {
   // Check for exact match in elimination list
-  if (packageStrategies.eliminate[packageName]) {
+  if ((packageStrategies.eliminate as any)[packageName]) {
     return {
       action: 'eliminate',
       reason: 'Development/build tool not needed in TypeScript'
@@ -106,8 +106,8 @@ export function getPackageStrategy(packageName: string): PackageStrategy {
   }
 
   // Check for inline packages
-  if (packageStrategies.inline[packageName]) {
-    const config = packageStrategies.inline[packageName];
+  if ((packageStrategies.inline as any)[packageName]) {
+    const config = (packageStrategies.inline as any)[packageName];
     return {
       action: 'inline',
       reason: 'Extract only used functions to reduce dependencies',
@@ -116,8 +116,8 @@ export function getPackageStrategy(packageName: string): PackageStrategy {
   }
 
   // Check for replaceable packages
-  if (packageStrategies.replace[packageName]) {
-    const config = packageStrategies.replace[packageName];
+  if ((packageStrategies.replace as any)[packageName]) {
+    const config = (packageStrategies.replace as any)[packageName];
     return {
       action: 'replace',
       replacement: config.replacement,
@@ -126,8 +126,8 @@ export function getPackageStrategy(packageName: string): PackageStrategy {
   }
 
   // Check for packages to preserve
-  if (packageStrategies.preserve[packageName]) {
-    const config = packageStrategies.preserve[packageName];
+  if ((packageStrategies.preserve as any)[packageName]) {
+    const config = (packageStrategies.preserve as any)[packageName];
     return {
       action: 'preserve',
       reason: config.reason
