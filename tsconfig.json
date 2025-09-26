@@ -23,6 +23,6 @@
     "allowJs": false,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*", "scripts/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test-project", "output", "extracted"]
 }

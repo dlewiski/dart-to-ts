@@ -5,7 +5,7 @@ export { SimplificationAnalyzer } from './simplification.js';
 import { PackageUsageAnalyzer } from './package-usage.js';
 import { TechDebtDetector } from './debt-detector.js';
 import { SimplificationAnalyzer } from './simplification.js';
-import { AnalysisResult, DartFile } from '../types.js';
+import { AnalysisResult, DartFile, PackageUsage } from '../types.js';
 
 export class Analyzer {
   private packageAnalyzer = new PackageUsageAnalyzer();
