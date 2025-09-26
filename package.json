@@ -1,0 +1,44 @@
+{
+  "name": "dart-to-ts-converter",
+  "version": "1.0.0",
+  "description": "Convert Dart code to modern TypeScript while eliminating technical debt",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "analyze": "tsx scripts/analyze.ts",
+    "convert": "tsx scripts/convert.ts",
+    "report": "tsx scripts/report.ts",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+  },
+  "keywords": ["dart", "typescript", "converter", "migration", "tech-debt"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.10.2",
+    "@aws-sdk/client-bedrock-runtime": "^3.478.0",
+    "commander": "^11.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "glob": "^10.3.10",
+    "fs-extra": "^11.2.0",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4",
+    "p-limit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/fs-extra": "^11.0.4",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.1.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "prettier": "^3.1.1"
+  }
+}

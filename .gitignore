@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Output directories
+dist/
+output/
+extracted/
+decisions/
+*.log
+
+# Test coverage
+coverage/
+*.lcov
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build artifacts
+*.tsbuildinfo
+
+# Dart project files (if testing)
+test-project/
+.dart_tool/
+.packages
+pubspec.lock
+
+# Reports
+*.html
+!consolidated-report.html
