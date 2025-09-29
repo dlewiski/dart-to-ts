@@ -130,6 +130,17 @@ export class ConversionOrchestrator {
 
     // Replace basic Dart syntax with TypeScript
     const replacements = [
+      // Remove Dart-specific directives first
+      { from: /^part\s+['"][^'"]+['"];?\s*$/gm, to: '' },
+      { from: /^part of\s+['"][^'"]+['"];?\s*$/gm, to: '' },
+
+      // Remove Dart decorators
+      { from: /@Factory\(\)\s*/g, to: '' },
+      { from: /@Props\(\)\s*/g, to: '' },
+      { from: /@Component\(\)\s*/g, to: '' },
+      { from: /@State\(\)\s*/g, to: '' },
+      { from: /@override\s*/g, to: '' },
+
       // Types
       { from: /\bint\b/g, to: 'number' },
       { from: /\bdouble\b/g, to: 'number' },
@@ -138,19 +149,43 @@ export class ConversionOrchestrator {
       { from: /\bString\b/g, to: 'string' },
       { from: /\bvoid\b/g, to: 'void' },
       { from: /\bdynamic\b/g, to: 'any' },
+      { from: /\bDateTime\b/g, to: 'Date' },
 
-      // Collections
+      // Collections - handle BuiltList/BuiltCollection properly
+      { from: /BuiltList<(.+?)>/g, to: 'Array<$1>' },
+      { from: /BuiltArray<(.+?)>/g, to: 'Array<$1>' },
+      { from: /BuiltMap<(.+?),\s*(.+?)>/g, to: 'Map<$1, $2>' },
+      { from: /BuiltSet<(.+?)>/g, to: 'Set<$1>' },
       { from: /List<(.+?)>/g, to: 'Array<$1>' },
       { from: /Map<(.+?),\s*(.+?)>/g, to: 'Map<$1, $2>' },
       { from: /Set<(.+?)>/g, to: 'Set<$1>' },
+
+      // Built Value patterns
+      { from: /\bBuilt<(\w+),\s*(\w+)Builder>/g, to: '$1' },
+      { from: /\bimplements\s+Built<(\w+),\s*\w+Builder>/g, to: '' },
+
+      // Remove factory constructors and private constructors
+      { from: /^\s*factory\s+\w+\([^\)]*\)\s*=\s*[^;]+;?\s*$/gm, to: '' },
+      { from: /^\s*\w+\._\(\);?\s*$/gm, to: '' },
+      { from: /\bfactory\s+\w+\([^\)]*\)\s*=\s*[^;]+;?/g, to: '' },
+
+      // Convert abstract class with Built to interface
+      { from: /abstract\s+class\s+(\w+)\s+implements\s+\w+\s*{/g, to: 'interface $1 {' },
+      { from: /abstract\s+class\s+(\w+)\s*{/g, to: 'interface $1 {' },
+
+      // Convert getter syntax - must handle BuiltList/Array pattern first
+      { from: /(Array|BuiltList)<([^>]+)>\s+get\s+(\w+);/g, to: 'readonly $3: Array<$2>;' },
+      { from: /(\w+)\s+get\s+(\w+);/g, to: 'readonly $2: $1;' },
+      { from: /(\w+)\s+get\s+(\w+)\s*=>/g, to: 'get $2(): $1 =>' },
 
       // Async
       { from: /Future<(.+?)>/g, to: 'Promise<$1>' },
       { from: /Stream<(.+?)>/g, to: 'Observable<$1>' },
       { from: /\basync\*/g, to: 'async function*' },
+      // Fix async function syntax: remove 'async' keyword that appears after return type
+      { from: /(\))\s+async\s+{/g, to: '$1 {' },
 
       // Functions
-      { from: /@override\s*/g, to: '' },
       { from: /\bfinal\b/g, to: 'const' },
       { from: /\bvar\b/g, to: 'let' },
 
@@ -159,17 +194,17 @@ export class ConversionOrchestrator {
         from: /class\s+(\w+)\s+extends\s+(\w+)\s+with\s+(.+?)\s*{/g,
         to: 'class $1 extends $2 /* mixins: $3 */ {',
       },
-      { from: /factory\s+(\w+)\.(\w+)\(/g, to: 'static $2(' },
 
-      // Null safety
-      { from: /(\w+)\?(?!\s*:)/g, to: '$1 | null' },
+      // Null safety - improved handling
+      { from: /(\w+)\s*\|\s*null\s*\|\s*null/g, to: '$1 | null' }, // Fix double null
+      { from: /(\w+)\?(?!\s*[:.])/g, to: '$1 | null' },
       { from: /(\w+)!(?!\s*[=:])/g, to: '$1' },
 
-      // String interpolation
-      { from: /'\$(\w+)'/g, to: '`${$1}`' },
-      { from: /"\$(\w+)"/g, to: '`${$1}`' },
-      { from: /'\${(.+?)}'/g, to: '`${$1}`' },
-      { from: /"\${(.+?)}"/g, to: '`${$1}`' },
+      // String interpolation - improved
+      { from: /'([^']*)\$(\w+)([^']*)'/g, to: '`$1${$2}$3`' },
+      { from: /"([^"]*)\$(\w+)([^"]*)"/g, to: '`$1${$2}$3`' },
+      { from: /'([^']*)\$\{([^}]+)\}([^']*)'/g, to: '`$1${$2}$3`' },
+      { from: /"([^"]*)\$\{([^}]+)\}([^"]*)"/g, to: '`$1${$2}$3`' },
 
       // Constructors
       { from: /(\w+)\(this\.(\w+)\)/g, to: 'constructor($2: any) { this.$2 = $2; }' },
@@ -213,7 +248,9 @@ export class ConversionOrchestrator {
         case 'replace':
           // Replace with modern alternative
           if (decision.replacement) {
-            const newImport = `import * from '${decision.replacement}';`;
+            const moduleName = decision.replacement.split('/').pop() || decision.replacement;
+            const importName = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
+            const newImport = `import ${importName} from '${decision.replacement}'`;
             code = code.replace(match[0], newImport);
             imports.push(decision.replacement);
           } else {
@@ -222,8 +259,8 @@ export class ConversionOrchestrator {
           break;
 
         case 'inline':
-          // Will be handled by inliner
-          code = code.replace(match[0], `// Inlined: ${importPath}`);
+          // Will be handled by inliner (remove import line entirely)
+          code = code.replace(match[0], '');
           break;
 
         case 'preserve': {
@@ -235,6 +272,15 @@ export class ConversionOrchestrator {
         }
       }
     }
+
+    // Clean up any leftover orphaned semicolons or broken imports
+    code = code.replace(/;\s*;\s*;/g, ';'); // Triple semicolons
+    code = code.replace(/;\s*;/g, ';'); // Double semicolons
+    code = code.replace(/^import\s+`[^`]+`;?\s*$/gm, ''); // Remove malformed imports
+    code = code.replace(/^\s*;\s*$/gm, ''); // Remove lines with only semicolons
+
+    // Remove empty lines (more than 2 consecutive)
+    code = code.replace(/\n\n\n+/g, '\n\n');
 
     return { code, imports, decisions };
   }
@@ -288,7 +334,7 @@ export class ConversionOrchestrator {
       importPath = importPath.slice(0, -5) + '.js';
     }
 
-    return `import * from '${importPath}';`;
+    return `import * from '${importPath}'`;
   }
 
   private extractModuleName(importPath: string): string {

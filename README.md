@@ -2,6 +2,20 @@
 
 A powerful tool for converting Dart code to modern TypeScript while eliminating technical debt and unnecessary dependencies. This converter doesn't just translate syntax - it modernizes your codebase by removing obsolete packages, inlining simple utilities, and applying current best practices.
 
+> ## ⚠️ **IMPORTANT: Manual Review Required**
+>
+> **This tool is a migration assistant, not a complete automated solution.** The generated TypeScript code REQUIRES thorough manual review and significant fixes before use in production.
+>
+> **Expected manual effort:** 2.5-4.5 hours per 200 lines of code
+>
+> **Critical limitations:**
+>
+> - ❌ Over React components are NOT converted (must be done manually)
+> - ❌ Cascade notation (`..`) not supported
+> - ⚠️ ~30-40% of output requires syntax fixes
+>
+> **📖 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for complete details before converting your codebase.**
+
 ## ✨ Key Features
 
 - **🎯 Smart Package Elimination**: Automatically identifies and removes unnecessary Dart-specific packages
@@ -187,6 +201,25 @@ After conversion, you'll get:
    - Code pattern replacements
    - Testing recommendations
 
+## ⚠️ Important: Review Generated Code
+
+**ALWAYS perform these steps after conversion:**
+
+1. **Review ALL generated TypeScript code** - Do not assume it's correct
+2. **Run TypeScript compiler:**
+
+   ```bash
+   npx tsc --noEmit output/**/*.ts
+   ```
+
+3. **Check for these patterns that need manual fixes:**
+   - Search for `Dom.` (Over React not converted)
+   - Search for `factory` (some factory constructors remain)
+   - Search for `..` (cascade notation not converted)
+   - Search for `_$` (generated code references)
+4. **See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)** for comprehensive list of known limitations
+5. **Budget 2.5-4.5 hours of manual work per 200 lines** for fixes and testing
+
 ## 🎯 Example Transformations
 
 ### Built Value → TypeScript Interface
@@ -249,7 +282,7 @@ const Button: React.FC<ButtonProps> = ({ onClick, children }) => {
 
 ## 🏗️ Architecture
 
-```
+```text
 dart-to-ts/
 ├── src/
 │   ├── analyzer/        # Code analysis and pattern detection

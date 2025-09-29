@@ -27,9 +27,6 @@ export const packageStrategies: Record<string, any> = {
     w_common: {
       extractPatterns: ['Disposable', 'DisposableManager', 'JsonSerializable'],
     },
-    w_flux: {
-      extractPatterns: ['Store', 'Actions', 'FluxComponent'],
-    },
     fluri: {
       extractPatterns: ['Fluri', 'FluriQuery'],
     },

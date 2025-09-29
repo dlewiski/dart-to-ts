@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { glob } from 'glob';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import * as path from 'path';
 import { ConversionOrchestrator } from '../src/converter/index.js';
 import { DartFile, ConversionConfig } from '../src/types.js';
@@ -57,7 +57,8 @@ program
 
       // Find Dart files
       spinner.text = 'Scanning for Dart files...';
-      const isDirectory = (await fs.stat(input)).isDirectory();
+      const stats = await fs.stat(input);
+      const isDirectory = stats.isDirectory();
       let dartFilePaths: string[];
 
       if (isDirectory) {
@@ -226,7 +227,7 @@ function printConversionSummary(
   successCount: number,
   failCount: number,
   decisions: any[],
-  _config: ConversionConfig
+  config: ConversionConfig
 ) {
   console.log('\n' + chalk.cyan('═'.repeat(60)));
   console.log(chalk.cyan.bold('🚀 Conversion Complete'));

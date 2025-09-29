@@ -5,7 +5,7 @@ import { PromptBuilder } from './prompt-builder.js';
 // import { PackageDecisionMaker } from './package-decisions.js';
 
 export { PromptBuilder } from './prompt-builder.js';
-// export { PackageDecisionMaker } from './package-decisions.js';
+export { PackageDecisionMaker } from './package-decisions.js';
 
 export class IntelligenceService {
   private client: BedrockRuntimeClient;
