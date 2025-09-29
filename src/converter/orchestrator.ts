@@ -1,12 +1,12 @@
 import { DartFile, ConversionConfig, ConversionResult, PackageDecision } from '../types.js';
 import { Inliner } from './inliner.js';
 import { Modernizer } from './modernizer.js';
-import { Analyzer } from '../analyzer/index.js';
+// import { Analyzer } from '../analyzer/index.js'; // TODO: Implement project-wide analysis
 import { IntelligenceService } from '../intelligence/index.js';
 import pLimit from 'p-limit';
 
 export class ConversionOrchestrator {
-  private analyzer = new Analyzer();
+  // private analyzer = new Analyzer(); // TODO: Implement project-wide analysis
   private inliner = new Inliner();
   private modernizer = new Modernizer();
   private intelligence?: IntelligenceService;
@@ -22,15 +22,13 @@ export class ConversionOrchestrator {
     config: ConversionConfig
   ): Promise<Map<string, ConversionResult>> {
     // Analyze the project first
-    const analysis = await this.analyzer.analyze(files);
+    // const analysis = await this.analyzer.analyze(files);
 
     // Create a concurrency limiter
     const limit = pLimit(config.maxConcurrency);
 
     // Convert files in parallel with concurrency limit
-    const conversionPromises = files.map(file =>
-      limit(() => this.convertFile(file, config, analysis))
-    );
+    const conversionPromises = files.map(file => limit(() => this.convertFile(file, config)));
 
     const results = await Promise.all(conversionPromises);
 
@@ -48,7 +46,7 @@ export class ConversionOrchestrator {
   async convertFile(
     file: DartFile,
     config: ConversionConfig,
-    analysis?: any
+    _analysis?: any
   ): Promise<ConversionResult> {
     const startTime = Date.now();
     const metrics = {
@@ -69,11 +67,7 @@ export class ConversionOrchestrator {
       let typescript = await this.basicConversion(file);
 
       // Step 2: Process imports and dependencies
-      const { code, imports, decisions } = await this.processImports(
-        typescript,
-        file,
-        config
-      );
+      const { code, imports, decisions } = await this.processImports(typescript, file, config);
       typescript = code;
 
       // Step 3: Inline utilities if aggressive mode
@@ -161,7 +155,10 @@ export class ConversionOrchestrator {
       { from: /\bvar\b/g, to: 'let' },
 
       // Classes
-      { from: /class\s+(\w+)\s+extends\s+(\w+)\s+with\s+(.+?)\s*{/g, to: 'class $1 extends $2 /* mixins: $3 */ {' },
+      {
+        from: /class\s+(\w+)\s+extends\s+(\w+)\s+with\s+(.+?)\s*{/g,
+        to: 'class $1 extends $2 /* mixins: $3 */ {',
+      },
       { from: /factory\s+(\w+)\.(\w+)\(/g, to: 'static $2(' },
 
       // Null safety
@@ -190,7 +187,7 @@ export class ConversionOrchestrator {
 
   private async processImports(
     typescript: string,
-    file: DartFile,
+    _file: DartFile,
     config: ConversionConfig
   ): Promise<{ code: string; imports: string[]; decisions: PackageDecision[] }> {
     const imports: string[] = [];
@@ -229,12 +226,13 @@ export class ConversionOrchestrator {
           code = code.replace(match[0], `// Inlined: ${importPath}`);
           break;
 
-        case 'preserve':
+        case 'preserve': {
           // Keep the import but convert to TypeScript style
           const tsImport = this.convertToTypeScriptImport(importPath);
           code = code.replace(match[0], tsImport);
           imports.push(this.extractModuleName(importPath));
           break;
+        }
       }
     }
 
@@ -243,7 +241,7 @@ export class ConversionOrchestrator {
 
   private async processImportPath(
     importPath: string,
-    config: ConversionConfig
+    _config: ConversionConfig
   ): Promise<PackageDecision> {
     // Handle dart: imports
     if (importPath.startsWith('dart:')) {

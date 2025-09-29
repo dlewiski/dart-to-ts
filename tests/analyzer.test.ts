@@ -88,8 +88,20 @@ describe('TechDebtDetector', () => {
 
   it('should calculate tech debt score', () => {
     const patterns = [
-      { pattern: 'critical-issue', severity: 'critical' as const, occurrences: 2, description: '', fix: '' },
-      { pattern: 'high-issue', severity: 'high' as const, occurrences: 3, description: '', fix: '' },
+      {
+        pattern: 'critical-issue',
+        severity: 'critical' as const,
+        occurrences: 2,
+        description: '',
+        fix: '',
+      },
+      {
+        pattern: 'high-issue',
+        severity: 'high' as const,
+        occurrences: 3,
+        description: '',
+        fix: '',
+      },
       { pattern: 'low-issue', severity: 'low' as const, occurrences: 10, description: '', fix: '' },
     ];
 

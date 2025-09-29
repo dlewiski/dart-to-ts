@@ -7,7 +7,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import { Analyzer } from '../src/analyzer/index.js';
 import { DartFile } from '../src/types.js';
-import { fileExtensions, ignoredPaths } from '../src/config/settings.js';
+import { ignoredPaths } from '../src/config/settings.js';
 
 const program = new Command();
 
@@ -25,7 +25,7 @@ program
 
     try {
       // Validate project path
-      if (!await fs.pathExists(projectPath)) {
+      if (!(await fs.pathExists(projectPath))) {
         throw new Error(`Project path does not exist: ${projectPath}`);
       }
 
@@ -45,7 +45,7 @@ program
       // Read Dart files
       spinner.text = 'Reading Dart files...';
       const files: DartFile[] = await Promise.all(
-        dartFiles.map(async (filePath) => {
+        dartFiles.map(async filePath => {
           const fullPath = path.join(projectPath, filePath);
           const content = await fs.readFile(fullPath, 'utf-8');
 
@@ -81,28 +81,20 @@ program
       await fs.ensureDir(options.output);
 
       // Save main analysis
-      await fs.writeJSON(
-        path.join(options.output, 'analysis.json'),
-        summary,
-        { spaces: 2 }
-      );
+      await fs.writeJSON(path.join(options.output, 'analysis.json'), summary, { spaces: 2 });
 
       // Save detailed package analysis
       if (options.packages && analysis.packages.length > 0) {
-        await fs.writeJSON(
-          path.join(options.output, 'packages.json'),
-          analysis.packages,
-          { spaces: 2 }
-        );
+        await fs.writeJSON(path.join(options.output, 'packages.json'), analysis.packages, {
+          spaces: 2,
+        });
       }
 
       // Save tech debt analysis
       if (options.techDebt && analysis.techDebt.length > 0) {
-        await fs.writeJSON(
-          path.join(options.output, 'tech-debt.json'),
-          analysis.techDebt,
-          { spaces: 2 }
-        );
+        await fs.writeJSON(path.join(options.output, 'tech-debt.json'), analysis.techDebt, {
+          spaces: 2,
+        });
       }
 
       spinner.succeed(chalk.green('Analysis complete!'));
@@ -126,7 +118,6 @@ program
       if (options.techDebt) {
         console.log(chalk.gray('   - tech-debt.json: Technical debt patterns'));
       }
-
     } catch (error) {
       spinner.fail(chalk.red('Analysis failed'));
       console.error(chalk.red('\n❌ Error:'), error);
@@ -169,7 +160,7 @@ function extractLibraryName(content: string): string | undefined {
   return libraryMatch ? libraryMatch[1] : undefined;
 }
 
-function printAnalysisSummary(summary: any, verbose: boolean) {
+function printAnalysisSummary(summary: any, _verbose: boolean) {
   console.log('\n' + chalk.cyan('═'.repeat(60)));
   console.log(chalk.cyan.bold('📊 Project Analysis Summary'));
   console.log(chalk.cyan('═'.repeat(60)));

@@ -125,7 +125,7 @@ program
         const debtReporter = new TechDebtReporter();
         const packageReporter = new PackageReporter();
         // Get tech debt patterns from first result
-        const firstResult = Array.from(results.values())[0];
+        // const firstResult = Array.from(results.values())[0]; // For future debugging
         const techDebtPatterns = []; // Would come from analysis
         await debtReporter.generateReport(techDebtPatterns, results, config.decisionsPath);
         await packageReporter.generateReport(decisions, results, config.decisionsPath);
@@ -157,7 +157,7 @@ function extractExports(content) {
     }
     return exports;
 }
-async function analyzeDryRun(files, config) {
+async function analyzeDryRun(files) {
     const { Analyzer } = await import('../src/analyzer/index.js');
     const { PackageDecisionMaker } = await import('../src/intelligence/index.js');
     const analyzer = new Analyzer();
@@ -182,7 +182,7 @@ async function analyzeDryRun(files, config) {
     console.log(chalk.white('  Lines saved:'), analysis.estimatedSavings.linesOfCode);
     console.log(chalk.white('  Complexity reduction:'), analysis.estimatedSavings.complexity);
 }
-function printConversionSummary(successCount, failCount, decisions, config) {
+function printConversionSummary(successCount, failCount, decisions, _config) {
     console.log('\n' + chalk.cyan('═'.repeat(60)));
     console.log(chalk.cyan.bold('🚀 Conversion Complete'));
     console.log(chalk.cyan('═'.repeat(60)));
@@ -201,9 +201,9 @@ function printConversionSummary(successCount, failCount, decisions, config) {
     console.log(chalk.blue(`  🔄 Replaced: ${actionCounts.replace || 0}`));
     console.log(chalk.green(`  ✅ Preserved: ${actionCounts.preserve || 0}`));
     console.log(chalk.white('\nOutput:'));
-    console.log(chalk.white('  TypeScript files:'), config.outputPath);
-    console.log(chalk.white('  Extracted utilities:'), config.extractPath);
-    console.log(chalk.white('  Reports:'), config.decisionsPath);
+    console.log(chalk.white('  TypeScript files:'), _config.outputPath);
+    console.log(chalk.white('  Extracted utilities:'), _config.extractPath);
+    console.log(chalk.white('  Reports:'), _config.decisionsPath);
     console.log('\n' + chalk.cyan('═'.repeat(60)));
     console.log(chalk.green('✨ Next steps:'));
     console.log(chalk.white('  1. Review the generated TypeScript code'));

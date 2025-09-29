@@ -29,25 +29,13 @@ export class DartToTypeScriptConverter {
     return orchestrator.convertProject(files, this.config);
   }
 
-  async generateReports(
-    results: Map<string, any>,
-    decisions: any[],
-    techDebtPatterns: any[]
-  ) {
+  async generateReports(results: Map<string, any>, decisions: any[], techDebtPatterns: any[]) {
     const debtReporter = new TechDebtReporter();
     const packageReporter = new PackageReporter();
 
-    await debtReporter.generateReport(
-      techDebtPatterns,
-      results,
-      this.config.decisionsPath
-    );
+    await debtReporter.generateReport(techDebtPatterns, results, this.config.decisionsPath);
 
-    await packageReporter.generateReport(
-      decisions,
-      results,
-      this.config.decisionsPath
-    );
+    await packageReporter.generateReport(decisions, results, this.config.decisionsPath);
   }
 }
 

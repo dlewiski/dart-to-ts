@@ -65,13 +65,13 @@ export const ignoredPaths = [
 ];
 
 export const preservedCommentPatterns = [
-  /\/\/\s*@/,  // Annotations
-  /\/\*\*/,    // JSDoc style
-  /\/\/\s*#/,  // Directives
+  /\/\/\s*@/, // Annotations
+  /\/\*\*/, // JSDoc style
+  /\/\/\s*#/, // Directives
 ];
 
 export const importPriority = {
-  'react': 1,
+  react: 1,
   'react-dom': 2,
   '@types': 10,
   'node:': 20,

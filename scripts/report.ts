@@ -23,14 +23,16 @@ program
       const techDebtPath = path.join(options.decisions, 'tech-debt.json');
       const decisionsPath = path.join(options.decisions, 'conversion-decisions.json');
 
-      if (!await fs.pathExists(analysisPath)) {
+      if (!(await fs.pathExists(analysisPath))) {
         throw new Error(`Analysis file not found at ${analysisPath}. Run 'analyze' first.`);
       }
 
       const analysis = await fs.readJSON(analysisPath);
-      const packages = await fs.pathExists(packagesPath) ? await fs.readJSON(packagesPath) : [];
-      const techDebt = await fs.pathExists(techDebtPath) ? await fs.readJSON(techDebtPath) : [];
-      const decisions = await fs.pathExists(decisionsPath) ? await fs.readJSON(decisionsPath) : [];
+      const packages = (await fs.pathExists(packagesPath)) ? await fs.readJSON(packagesPath) : [];
+      const techDebt = (await fs.pathExists(techDebtPath)) ? await fs.readJSON(techDebtPath) : [];
+      const decisions = (await fs.pathExists(decisionsPath))
+        ? await fs.readJSON(decisionsPath)
+        : [];
 
       // Generate consolidated report
       const report = generateConsolidatedReport(analysis, packages, techDebt, decisions);
@@ -56,7 +58,6 @@ program
 
       console.log(chalk.green('✅ Reports generated successfully!'));
       console.log(chalk.gray(`   Output directory: ${options.decisions}`));
-
     } catch (error) {
       console.error(chalk.red('❌ Error generating reports:'), error);
       process.exit(1);
@@ -137,9 +138,7 @@ function getCriticalDebts(techDebt: any[]): any[] {
 }
 
 function getMajorDecisions(decisions: any[]): any[] {
-  return decisions
-    .filter(d => d.action === 'replace' || d.action === 'eliminate')
-    .slice(0, 10);
+  return decisions.filter(d => d.action === 'replace' || d.action === 'eliminate').slice(0, 10);
 }
 
 async function outputJSON(report: any, outputDir: string) {
@@ -178,26 +177,35 @@ ${Object.entries(report.metrics.packageComplexity)
 
 ## Top Packages Requiring Attention
 
-${report.details.topPackages.map((pkg: any, i: number) =>
-  `${i + 1}. **${pkg.packageName}** (${pkg.complexity})
+${report.details.topPackages
+  .map(
+    (pkg: any, i: number) =>
+      `${i + 1}. **${pkg.packageName}** (${pkg.complexity})
    - Imports: ${pkg.imports.length}
    - Used: ${Object.values(pkg.actuallyUsed).flat().length} items`
-).join('\n\n')}
+  )
+  .join('\n\n')}
 
 ## Critical Technical Debt
 
-${report.details.criticalDebts.map((debt: any, i: number) =>
-  `${i + 1}. **${debt.pattern}** (${debt.severity})
+${report.details.criticalDebts
+  .map(
+    (debt: any, i: number) =>
+      `${i + 1}. **${debt.pattern}** (${debt.severity})
    - Occurrences: ${debt.occurrences}
    - Fix: ${debt.fix}`
-).join('\n\n')}
+  )
+  .join('\n\n')}
 
 ## Major Migration Decisions
 
-${report.details.majorDecisions.map((decision: any) =>
-  `- **${decision.packageName}**: ${decision.action}
+${report.details.majorDecisions
+  .map(
+    (decision: any) =>
+      `- **${decision.packageName}**: ${decision.action}
   - Reason: ${decision.reason}`
-).join('\n')}
+  )
+  .join('\n')}
 
 ## Recommendations
 
@@ -299,12 +307,14 @@ async function outputHTML(report: any, outputDir: string) {
       <th>Fix</th>
     </tr>
     ${report.details.criticalDebts
-      .map((debt: any) => `<tr>
+      .map(
+        (debt: any) => `<tr>
         <td>${debt.pattern}</td>
         <td class="${debt.severity}">${debt.severity}</td>
         <td>${debt.occurrences}</td>
         <td>${debt.fix}</td>
-      </tr>`)
+      </tr>`
+      )
       .join('')}
   </table>
 
@@ -352,11 +362,7 @@ async function generateComparisonReport(beforePath: string, outputDir: string) {
       },
     };
 
-    await fs.writeJSON(
-      path.join(outputDir, 'comparison-report.json'),
-      comparison,
-      { spaces: 2 }
-    );
+    await fs.writeJSON(path.join(outputDir, 'comparison-report.json'), comparison, { spaces: 2 });
 
     console.log(chalk.green('\n📊 Comparison Report:'));
     console.log(chalk.white(`  Packages reduced: ${comparison.improvement.packages}`));

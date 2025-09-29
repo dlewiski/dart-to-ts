@@ -30,10 +30,7 @@ export class Inliner {
     return { code, inlinedCount };
   }
 
-  private async inlineUtility(
-    code: string,
-    utility: ExtractedUtility
-  ): Promise<string> {
+  private async inlineUtility(code: string, utility: ExtractedUtility): Promise<string> {
     // Find where the utility is used
     const usagePattern = new RegExp(`\\b${utility.name}\\b`, 'g');
 
@@ -87,10 +84,7 @@ ${utility.code}
     await this.createUtilityIndex(utilsPath);
   }
 
-  private generateUtilityFile(
-    packageName: string,
-    utilities: ExtractedUtility[]
-  ): string {
+  private generateUtilityFile(packageName: string, utilities: ExtractedUtility[]): string {
     const header = `/**
  * Utilities inlined from package: ${packageName}
  * These utilities were extracted to reduce dependencies
