@@ -12,45 +12,38 @@ export class PackageReporter {
     const report = this.buildReport(decisions, results);
 
     // Save JSON report
-    await fs.writeJSON(
-      path.join(outputPath, 'package-report.json'),
-      report,
-      { spaces: 2 }
-    );
+    await fs.writeJSON(path.join(outputPath, 'package-report.json'), report, { spaces: 2 });
 
     // Save markdown report
     const markdown = this.generateMarkdown(report);
-    await fs.writeFile(
-      path.join(outputPath, 'package-report.md'),
-      markdown
-    );
+    await fs.writeFile(path.join(outputPath, 'package-report.md'), markdown);
 
     // Save migration guide
     const migrationGuide = this.generateMigrationGuide(report);
-    await fs.writeFile(
-      path.join(outputPath, 'migration-guide.md'),
-      migrationGuide
-    );
+    await fs.writeFile(path.join(outputPath, 'migration-guide.md'), migrationGuide);
 
     // Print summary
     this.printSummary(report);
   }
 
-  private buildReport(
-    decisions: PackageDecision[],
-    results: Map<string, ConversionResult>
-  ) {
-    const actionCounts = decisions.reduce((acc, d) => {
-      acc[d.action] = (acc[d.action] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  private buildReport(decisions: PackageDecision[], results: Map<string, ConversionResult>) {
+    const actionCounts = decisions.reduce(
+      (acc, d) => {
+        acc[d.action] = (acc[d.action] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const totalMetrics = Array.from(results.values()).reduce((acc, r) => {
-      acc.packagesEliminated += r.metrics.packagesEliminated;
-      acc.packagesInlined += r.metrics.packagesInlined;
-      acc.packagesReplaced += r.metrics.packagesReplaced;
-      return acc;
-    }, { packagesEliminated: 0, packagesInlined: 0, packagesReplaced: 0 });
+    const totalMetrics = Array.from(results.values()).reduce(
+      (acc, r) => {
+        acc.packagesEliminated += r.metrics.packagesEliminated;
+        acc.packagesInlined += r.metrics.packagesInlined;
+        acc.packagesReplaced += r.metrics.packagesReplaced;
+        return acc;
+      },
+      { packagesEliminated: 0, packagesInlined: 0, packagesReplaced: 0 }
+    );
 
     const groupedDecisions = this.groupDecisionsByAction(decisions);
 
@@ -123,11 +116,15 @@ ${report.decisions.eliminate.map((d: PackageDecision) => `- **${d.packageName}**
 
 These packages have simple utilities that are extracted and inlined:
 
-${report.inlineCandidates.map((c: any) => `
+${report.inlineCandidates
+  .map(
+    (c: any) => `
 - **${c.package}**
   - Reason: ${c.reason}
   - Utilities: ${c.utilities.join(', ') || 'To be determined'}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 ### 🔄 Replaced Packages (${report.decisions.replace.length})
 
@@ -198,8 +195,12 @@ ${report.decisions.eliminate.map((d: PackageDecision) => `// Remove: import {...
 Update these imports:
 
 \`\`\`typescript
-${report.replacements.map((r: any) => `// Before: import {...} from '${r.from}';
-// After:  import {...} from '${r.to}';`).join('\n\n')}
+${report.replacements
+  .map(
+    (r: any) => `// Before: import {...} from '${r.from}';
+// After:  import {...} from '${r.to}';`
+  )
+  .join('\n\n')}
 \`\`\`
 
 ### 4. Use Inlined Utilities
@@ -312,12 +313,18 @@ For package-specific migration questions, consult:
     console.log(chalk.blue('═'.repeat(60)));
 
     console.log(chalk.white('\nPackage Actions:'));
-    console.log(chalk.red(`  🗑️  Eliminate: ${report.summary.actionCounts.eliminate || 0} packages`));
+    console.log(
+      chalk.red(`  🗑️  Eliminate: ${report.summary.actionCounts.eliminate || 0} packages`)
+    );
     console.log(chalk.yellow(`  📦 Inline: ${report.summary.actionCounts.inline || 0} packages`));
     console.log(chalk.cyan(`  🔄 Replace: ${report.summary.actionCounts.replace || 0} packages`));
-    console.log(chalk.green(`  ✅ Preserve: ${report.summary.actionCounts.preserve || 0} packages`));
+    console.log(
+      chalk.green(`  ✅ Preserve: ${report.summary.actionCounts.preserve || 0} packages`)
+    );
 
-    const reduction = Math.round((report.summary.dependencyReduction / report.summary.totalPackages) * 100);
+    const reduction = Math.round(
+      (report.summary.dependencyReduction / report.summary.totalPackages) * 100
+    );
     console.log(chalk.white('\nDependency Reduction:'));
     console.log(chalk.green(`  📉 ${reduction}% reduction in dependencies`));
     console.log(chalk.green(`  🎯 ${report.summary.dependencyReduction} packages removed/inlined`));

@@ -22,10 +22,7 @@ export class SimplificationAnalyzer {
     return opportunities;
   }
 
-  private identifyExtractableUtilities(
-    usage: PackageUsage,
-    files: DartFile[]
-  ): ExtractedUtility[] {
+  private identifyExtractableUtilities(usage: PackageUsage, files: DartFile[]): ExtractedUtility[] {
     const utilities: ExtractedUtility[] = [];
 
     // Extract simple functions
@@ -68,25 +65,34 @@ export class SimplificationAnalyzer {
   private isSimpleFunction(funcName: string, _files: DartFile[]): boolean {
     // Common simple utility functions that can be easily extracted
     const simplePatterns = [
-      'dispose', 'validate', 'format', 'parse', 'convert',
-      'isEmpty', 'isNotEmpty', 'contains', 'toString',
+      'dispose',
+      'validate',
+      'format',
+      'parse',
+      'convert',
+      'isEmpty',
+      'isNotEmpty',
+      'contains',
+      'toString',
     ];
 
-    return simplePatterns.some(pattern =>
-      funcName.toLowerCase().includes(pattern.toLowerCase())
-    );
+    return simplePatterns.some(pattern => funcName.toLowerCase().includes(pattern.toLowerCase()));
   }
 
   private isSimpleClass(className: string, _files: DartFile[]): boolean {
     // Common simple classes that can be extracted
     const simpleClasses = [
-      'Disposable', 'Observable', 'Manager', 'Handler',
-      'Validator', 'Formatter', 'Parser', 'Builder',
+      'Disposable',
+      'Observable',
+      'Manager',
+      'Handler',
+      'Validator',
+      'Formatter',
+      'Parser',
+      'Builder',
     ];
 
-    return simpleClasses.some(pattern =>
-      className.includes(pattern)
-    );
+    return simpleClasses.some(pattern => className.includes(pattern));
   }
 
   private generateTypeScriptFunction(funcName: string): string {
@@ -193,7 +199,9 @@ export class SimplificationAnalyzer {
         /get\s+(\w+)\s*=>\s*_\1;|set\s+(\w+)\(.*?\)\s*{\s*_\2\s*=.*?;\s*}/g
       );
       if (trivialAccessors) {
-        issues.push(`${trivialAccessors.length} trivial getters/setters can be replaced with public fields`);
+        issues.push(
+          `${trivialAccessors.length} trivial getters/setters can be replaced with public fields`
+        );
       }
 
       // Check for unnecessary type annotations
@@ -205,9 +213,7 @@ export class SimplificationAnalyzer {
       }
 
       // Check for verbose null checks
-      const verboseNullChecks = file.content.match(
-        /if\s*\(\s*\w+\s*!=\s*null\s*\)/g
-      );
+      const verboseNullChecks = file.content.match(/if\s*\(\s*\w+\s*!=\s*null\s*\)/g);
       if (verboseNullChecks) {
         issues.push(`${verboseNullChecks.length} verbose null checks can use null-aware operators`);
       }
@@ -224,22 +230,22 @@ export class SimplificationAnalyzer {
     const suggestions: string[] = [];
 
     const modernAlternatives: Record<string, string[]> = {
-      'built_value': [
+      built_value: [
         'Use TypeScript interfaces and classes',
-        'Leverage TypeScript\'s structural typing',
+        "Leverage TypeScript's structural typing",
         'Use Object.freeze() for immutability',
       ],
-      'built_collection': [
+      built_collection: [
         'Use native JavaScript arrays and maps',
         'Consider Immutable.js if immutability is critical',
         'Use TypeScript ReadonlyArray<T> and ReadonlyMap<K, V>',
       ],
-      'redux': [
+      redux: [
         'Migrate to @reduxjs/toolkit',
         'Use createSlice for reducers',
         'Leverage RTK Query for data fetching',
       ],
-      'w_transport': [
+      w_transport: [
         'Replace with axios or fetch API',
         'Use interceptors for common headers',
         'Implement retry logic with axios-retry',

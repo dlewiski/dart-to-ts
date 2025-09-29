@@ -65,14 +65,14 @@ export class Analyzer {
     return recommendations;
   }
 
-  private generateSimplificationRecommendations(
-    simplifications: Map<string, any>
-  ): string[] {
+  private generateSimplificationRecommendations(simplifications: Map<string, any>): string[] {
     const recommendations: string[] = [];
 
     if (simplifications.size > 0) {
-      const totalUtilities = Array.from(simplifications.values())
-        .reduce((sum, utils) => sum + utils.length, 0);
+      const totalUtilities = Array.from(simplifications.values()).reduce(
+        (sum, utils) => sum + utils.length,
+        0
+      );
 
       recommendations.push(
         `🔧 ${totalUtilities} utilities can be extracted and inlined from ${simplifications.size} packages`

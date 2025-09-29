@@ -41,12 +41,7 @@ export class PackageDecisionMaker {
 
   private hasCascadingDependencies(pkg: PackageUsage): boolean {
     // List of packages known to have heavy dependencies
-    const heavyPackages = [
-      'built_value',
-      'built_collection',
-      'over_react',
-      'w_transport',
-    ];
+    const heavyPackages = ['built_value', 'built_collection', 'over_react', 'w_transport'];
 
     return heavyPackages.includes(pkg.packageName);
   }
@@ -117,7 +112,7 @@ export class PackageDecisionMaker {
   private ensureCompatibleReplacements(group: PackageDecision[]): void {
     // Check for known compatible replacements
     const compatibilityMap: Record<string, string[]> = {
-      'react': ['react-dom', 'react-redux'],
+      react: ['react-dom', 'react-redux'],
       '@reduxjs/toolkit': ['react-redux'],
     };
 

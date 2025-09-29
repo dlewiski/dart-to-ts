@@ -12,40 +12,33 @@ export class TechDebtReporter {
     const report = this.buildReport(patterns, results);
 
     // Save JSON report
-    await fs.writeJSON(
-      path.join(outputPath, 'tech-debt-report.json'),
-      report,
-      { spaces: 2 }
-    );
+    await fs.writeJSON(path.join(outputPath, 'tech-debt-report.json'), report, { spaces: 2 });
 
     // Save markdown report
     const markdown = this.generateMarkdown(report);
-    await fs.writeFile(
-      path.join(outputPath, 'tech-debt-report.md'),
-      markdown
-    );
+    await fs.writeFile(path.join(outputPath, 'tech-debt-report.md'), markdown);
 
     // Print summary to console
     this.printSummary(report);
   }
 
-  private buildReport(
-    patterns: TechDebtPattern[],
-    results: Map<string, ConversionResult>
-  ) {
+  private buildReport(patterns: TechDebtPattern[], results: Map<string, ConversionResult>) {
     const totalFiles = results.size;
     const successfulConversions = Array.from(results.values()).filter(r => r.success).length;
-    const totalDebtReduction = Array.from(results.values())
-      .reduce((sum, r) => sum + r.metrics.techDebtReduction, 0);
+    const totalDebtReduction = Array.from(results.values()).reduce(
+      (sum, r) => sum + r.metrics.techDebtReduction,
+      0
+    );
 
-    const severityCounts = patterns.reduce((acc, p) => {
-      acc[p.severity] = (acc[p.severity] || 0) + p.occurrences;
-      return acc;
-    }, {} as Record<string, number>);
+    const severityCounts = patterns.reduce(
+      (acc, p) => {
+        acc[p.severity] = (acc[p.severity] || 0) + p.occurrences;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
-    const topPatterns = patterns
-      .sort((a, b) => b.occurrences - a.occurrences)
-      .slice(0, 10);
+    const topPatterns = patterns.sort((a, b) => b.occurrences - a.occurrences).slice(0, 10);
 
     return {
       summary: {
@@ -87,14 +80,18 @@ Generated: ${new Date(report.timestamp).toLocaleString()}
 
 ## Top 10 Technical Debt Patterns
 
-${report.topPatterns.map((p: TechDebtPattern, i: number) => `
+${report.topPatterns
+  .map(
+    (p: TechDebtPattern, i: number) => `
 ### ${i + 1}. ${p.pattern}
 
 - **Severity**: ${p.severity}
 - **Occurrences**: ${p.occurrences}
 - **Description**: ${p.description}
 - **Recommended Fix**: ${p.fix}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 ## Recommendations
 
@@ -120,7 +117,11 @@ ${report.topPatterns.map((p: TechDebtPattern, i: number) => `
     console.log(chalk.cyan('═'.repeat(60)));
 
     console.log(chalk.white('\nConversion Results:'));
-    console.log(chalk.green(`  ✅ Successful: ${report.summary.successfulConversions}/${report.summary.totalFiles}`));
+    console.log(
+      chalk.green(
+        `  ✅ Successful: ${report.summary.successfulConversions}/${report.summary.totalFiles}`
+      )
+    );
     console.log(chalk.yellow(`  📈 Conversion Rate: ${report.summary.conversionRate.toFixed(1)}%`));
     console.log(chalk.blue(`  🎯 Debt Reduction: ${report.summary.totalDebtReduction} points`));
 
@@ -141,12 +142,13 @@ ${report.topPatterns.map((p: TechDebtPattern, i: number) => `
 
     console.log(chalk.white('\nTop Issues to Address:'));
     report.topPatterns.slice(0, 3).forEach((p: TechDebtPattern, i: number) => {
-      const severityColor = {
-        critical: chalk.red,
-        high: chalk.magenta,
-        medium: chalk.yellow,
-        low: chalk.gray,
-      }[p.severity] || chalk.white;
+      const severityColor =
+        {
+          critical: chalk.red,
+          high: chalk.magenta,
+          medium: chalk.yellow,
+          low: chalk.gray,
+        }[p.severity] || chalk.white;
 
       console.log(severityColor(`  ${i + 1}. ${p.pattern} (${p.occurrences} occurrences)`));
     });
@@ -184,11 +186,7 @@ ${report.topPatterns.map((p: TechDebtPattern, i: number) => `
       timestamp: new Date().toISOString(),
     };
 
-    await fs.writeJSON(
-      path.join(outputPath, 'debt-comparison.json'),
-      report,
-      { spaces: 2 }
-    );
+    await fs.writeJSON(path.join(outputPath, 'debt-comparison.json'), report, { spaces: 2 });
 
     console.log(chalk.green('\n📊 Technical Debt Improvement:'));
     console.log(chalk.white(`  Before: ${beforeScore} points`));
@@ -205,7 +203,7 @@ ${report.topPatterns.map((p: TechDebtPattern, i: number) => `
     };
 
     return patterns.reduce((score, pattern) => {
-      return score + (weights[pattern.severity] * pattern.occurrences);
+      return score + weights[pattern.severity] * pattern.occurrences;
     }, 0);
   }
 }

@@ -123,8 +123,12 @@ export class TechDebtDetector {
     const chunkSize = 5;
 
     for (let i = 0; i <= lines.length - chunkSize; i++) {
-      const chunk = lines.slice(i, i + chunkSize).join('\n').trim();
-      if (chunk.length > 50) { // Ignore small chunks
+      const chunk = lines
+        .slice(i, i + chunkSize)
+        .join('\n')
+        .trim();
+      if (chunk.length > 50) {
+        // Ignore small chunks
         chunks.set(chunk, (chunks.get(chunk) || 0) + 1);
       }
     }
@@ -198,7 +202,7 @@ export class TechDebtDetector {
     };
 
     return patterns.reduce((score, pattern) => {
-      return score + (weights[pattern.severity] * pattern.occurrences);
+      return score + weights[pattern.severity] * pattern.occurrences;
     }, 0);
   }
 
@@ -206,11 +210,14 @@ export class TechDebtDetector {
     const recommendations: string[] = [];
 
     // Group by severity
-    const bySeverity = patterns.reduce((acc, pattern) => {
-      if (!acc[pattern.severity]) acc[pattern.severity] = [];
-      acc[pattern.severity].push(pattern);
-      return acc;
-    }, {} as Record<string, TechDebtPattern[]>);
+    const bySeverity = patterns.reduce(
+      (acc, pattern) => {
+        if (!acc[pattern.severity]) acc[pattern.severity] = [];
+        acc[pattern.severity].push(pattern);
+        return acc;
+      },
+      {} as Record<string, TechDebtPattern[]>
+    );
 
     if (bySeverity.critical?.length > 0) {
       recommendations.push('🚨 Critical issues found that need immediate attention');
@@ -222,7 +229,9 @@ export class TechDebtDetector {
 
     const totalOccurrences = patterns.reduce((sum, p) => sum + p.occurrences, 0);
     if (totalOccurrences > 50) {
-      recommendations.push('📊 Consider a dedicated refactoring sprint to address accumulated debt');
+      recommendations.push(
+        '📊 Consider a dedicated refactoring sprint to address accumulated debt'
+      );
     }
 
     // Specific recommendations

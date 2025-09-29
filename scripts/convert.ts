@@ -46,8 +46,12 @@ program
 
       // Check for AWS credentials if LLM is enabled
       if (config.useLLM && !process.env.AWS_ACCESS_KEY_ID) {
-        console.warn(chalk.yellow('\n⚠️  Warning: AWS credentials not found. LLM enhancement disabled.'));
-        console.warn(chalk.gray('   Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to enable LLM features.'));
+        console.warn(
+          chalk.yellow('\n⚠️  Warning: AWS credentials not found. LLM enhancement disabled.')
+        );
+        console.warn(
+          chalk.gray('   Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to enable LLM features.')
+        );
         config.useLLM = false;
       }
 
@@ -74,10 +78,8 @@ program
       // Read Dart files
       spinner.text = 'Reading Dart files...';
       const files: DartFile[] = await Promise.all(
-        dartFilePaths.map(async (filePath) => {
-          const fullPath = isDirectory
-            ? path.join(input, filePath)
-            : input;
+        dartFilePaths.map(async filePath => {
+          const fullPath = isDirectory ? path.join(input, filePath) : input;
           const content = await fs.readFile(fullPath, 'utf-8');
 
           return {
@@ -135,13 +137,10 @@ program
       }
 
       // Save decision log
-      const decisions = Array.from(results.values())
-        .flatMap(r => r.decisions);
-      await fs.writeJSON(
-        path.join(config.decisionsPath, 'conversion-decisions.json'),
-        decisions,
-        { spaces: 2 }
-      );
+      const decisions = Array.from(results.values()).flatMap(r => r.decisions);
+      await fs.writeJSON(path.join(config.decisionsPath, 'conversion-decisions.json'), decisions, {
+        spaces: 2,
+      });
 
       // Generate reports
       spinner.text = 'Generating reports...';
@@ -161,7 +160,6 @@ program
 
       // Print summary
       printConversionSummary(successCount, failCount, decisions, config);
-
     } catch (error) {
       spinner.fail(chalk.red('Conversion failed'));
       console.error(chalk.red('\n❌ Error:'), error);
@@ -205,10 +203,13 @@ async function analyzeDryRun(files: DartFile[], _config: ConversionConfig) {
   console.log(chalk.white('Tech debt patterns:'), analysis.techDebt.length);
 
   console.log(chalk.cyan('\nPackage Actions:'));
-  const actionCounts = decisions.reduce((acc, d) => {
-    acc[d.action] = (acc[d.action] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const actionCounts = decisions.reduce(
+    (acc, d) => {
+      acc[d.action] = (acc[d.action] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   console.log(chalk.red('  Eliminate:'), actionCounts.eliminate || 0);
   console.log(chalk.yellow('  Inline:'), actionCounts.inline || 0);
@@ -237,10 +238,13 @@ function printConversionSummary(
     console.log(chalk.red(`  ❌ Failed: ${failCount}`));
   }
 
-  const actionCounts = decisions.reduce((acc, d) => {
-    acc[d.action] = (acc[d.action] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const actionCounts = decisions.reduce(
+    (acc, d) => {
+      acc[d.action] = (acc[d.action] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   console.log(chalk.white('\nPackage Actions:'));
   console.log(chalk.red(`  🗑️  Eliminated: ${actionCounts.eliminate || 0}`));

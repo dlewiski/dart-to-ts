@@ -82,7 +82,9 @@ export class PackageUsageAnalyzer {
     const content = file.content;
 
     // Extract imported symbols
-    const showRegex = new RegExp(`import\\s+['"]${importPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]\\s+show\\s+([^;]+);`);
+    const showRegex = new RegExp(
+      `import\\s+['"]${importPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]\\s+show\\s+([^;]+);`
+    );
     const showMatch = content.match(showRegex);
 
     if (showMatch) {
@@ -102,13 +104,17 @@ export class PackageUsageAnalyzer {
       // Check if it's a class (capitalized)
       if (/^[A-Z]/.test(symbol)) {
         // Check if it's used as a type or instantiated
-        if (new RegExp(`\\b${symbol}\\s*<`).test(content) ||
-            new RegExp(`:\\s*${symbol}\\b`).test(content)) {
+        if (
+          new RegExp(`\\b${symbol}\\s*<`).test(content) ||
+          new RegExp(`:\\s*${symbol}\\b`).test(content)
+        ) {
           if (!usage.actuallyUsed.types.includes(symbol)) {
             usage.actuallyUsed.types.push(symbol);
           }
-        } else if (new RegExp(`new\\s+${symbol}\\b`).test(content) ||
-                   new RegExp(`${symbol}\\(`).test(content)) {
+        } else if (
+          new RegExp(`new\\s+${symbol}\\b`).test(content) ||
+          new RegExp(`${symbol}\\(`).test(content)
+        ) {
           if (!usage.actuallyUsed.classes.includes(symbol)) {
             usage.actuallyUsed.classes.push(symbol);
           }
@@ -132,10 +138,10 @@ export class PackageUsageAnalyzer {
   private detectUsagePatterns(content: string, usage: PackageUsage) {
     // Look for common patterns from known packages
     const patterns: Record<string, string[]> = {
-      'over_react': ['Dom.', 'uiFunction', 'uiForwardRef', 'Props', 'State'],
-      'w_flux': ['Store', 'Actions', 'FluxComponent'],
-      'built_value': ['Built', 'Builder', 'Serializer'],
-      'w_common': ['Disposable', 'DisposableManager'],
+      over_react: ['Dom.', 'uiFunction', 'uiForwardRef', 'Props', 'State'],
+      w_flux: ['Store', 'Actions', 'FluxComponent'],
+      built_value: ['Built', 'Builder', 'Serializer'],
+      w_common: ['Disposable', 'DisposableManager'],
     };
 
     if (patterns[usage.packageName]) {
@@ -172,7 +178,9 @@ export class PackageUsageAnalyzer {
         if (!packageName) continue;
 
         // Check if any symbols from this import are used
-        const showRegex = new RegExp(`import\\s+['"]${imp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]\\s+show\\s+([^;]+);`);
+        const showRegex = new RegExp(
+          `import\\s+['"]${imp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]\\s+show\\s+([^;]+);`
+        );
         const showMatch = file.content.match(showRegex);
 
         if (showMatch) {

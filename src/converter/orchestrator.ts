@@ -28,9 +28,7 @@ export class ConversionOrchestrator {
     const limit = pLimit(config.maxConcurrency);
 
     // Convert files in parallel with concurrency limit
-    const conversionPromises = files.map(file =>
-      limit(() => this.convertFile(file, config))
-    );
+    const conversionPromises = files.map(file => limit(() => this.convertFile(file, config)));
 
     const results = await Promise.all(conversionPromises);
 
@@ -69,11 +67,7 @@ export class ConversionOrchestrator {
       let typescript = await this.basicConversion(file);
 
       // Step 2: Process imports and dependencies
-      const { code, imports, decisions } = await this.processImports(
-        typescript,
-        file,
-        config
-      );
+      const { code, imports, decisions } = await this.processImports(typescript, file, config);
       typescript = code;
 
       // Step 3: Inline utilities if aggressive mode
@@ -161,7 +155,10 @@ export class ConversionOrchestrator {
       { from: /\bvar\b/g, to: 'let' },
 
       // Classes
-      { from: /class\s+(\w+)\s+extends\s+(\w+)\s+with\s+(.+?)\s*{/g, to: 'class $1 extends $2 /* mixins: $3 */ {' },
+      {
+        from: /class\s+(\w+)\s+extends\s+(\w+)\s+with\s+(.+?)\s*{/g,
+        to: 'class $1 extends $2 /* mixins: $3 */ {',
+      },
       { from: /factory\s+(\w+)\.(\w+)\(/g, to: 'static $2(' },
 
       // Null safety

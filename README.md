@@ -65,12 +65,14 @@ pnpm run report
 Analyzes a Dart project for package usage and technical debt.
 
 **Options:**
+
 - `-o, --output <path>` - Output directory for analysis (default: `./decisions`)
 - `--no-tech-debt` - Skip technical debt analysis
 - `--no-packages` - Skip package analysis
 - `-v, --verbose` - Verbose output
 
 **Example:**
+
 ```bash
 pnpm run analyze ~/my-dart-app --output ./analysis
 ```
@@ -80,6 +82,7 @@ pnpm run analyze ~/my-dart-app --output ./analysis
 Converts Dart files to TypeScript with intelligent optimization.
 
 **Options:**
+
 - `-o, --output <path>` - Output directory (default: `./output`)
 - `--aggressive` - Enable aggressive optimization
 - `--no-modernize` - Skip modernization patterns
@@ -88,6 +91,7 @@ Converts Dart files to TypeScript with intelligent optimization.
 - `--concurrency <n>` - Max parallel conversions (default: 5)
 
 **Example:**
+
 ```bash
 pnpm run convert ~/my-dart-app --aggressive --output ./typescript-app
 ```
@@ -97,11 +101,13 @@ pnpm run convert ~/my-dart-app --aggressive --output ./typescript-app
 Generates comprehensive migration reports.
 
 **Options:**
+
 - `-d, --decisions <path>` - Decisions directory (default: `./decisions`)
 - `-f, --format <type>` - Output format: json|markdown|html (default: markdown)
 - `--compare <before>` - Compare with previous analysis
 
 **Example:**
+
 ```bash
 pnpm run report --format html
 ```
@@ -130,19 +136,25 @@ TEMPERATURE=0.3
 The converter uses intelligent strategies for different package types:
 
 ### ❌ Eliminated Packages
+
 Packages completely removed as they're not needed in TypeScript:
+
 - `dart_dev`, `build_runner` - Build tools not needed
 - `built_value_generator` - Code generation not required
 - `over_react_format` - Formatting handled by Prettier
 
 ### 📥 Inlined Packages
+
 Simple utilities extracted and inlined:
+
 - `w_common` - Disposable patterns
 - `w_flux` - Simple flux utilities
 - `fluri` - URI building helpers
 
 ### 🔄 Replaced Packages
+
 Modern alternatives used instead:
+
 - `over_react` → `react`
 - `redux` → `@reduxjs/toolkit`
 - `w_transport` → `axios`
@@ -150,7 +162,9 @@ Modern alternatives used instead:
 - `built_collection` → Native arrays/maps
 
 ### ✅ Preserved Packages
+
 Complex packages that need manual review:
+
 - `unify_ui` - Internal UI libraries
 - Domain-specific packages
 
@@ -178,6 +192,7 @@ After conversion, you'll get:
 ### Built Value → TypeScript Interface
 
 **Before (Dart):**
+
 ```dart
 abstract class User implements Built<User, UserBuilder> {
   String get name;
@@ -187,6 +202,7 @@ abstract class User implements Built<User, UserBuilder> {
 ```
 
 **After (TypeScript):**
+
 ```typescript
 interface User {
   readonly name: string;
@@ -198,6 +214,7 @@ interface User {
 ### Over React → React
 
 **Before (Dart):**
+
 ```dart
 import 'package:over_react/over_react.dart';
 
@@ -216,6 +233,7 @@ class ButtonComponent extends UiComponent<ButtonProps> {
 ```
 
 **After (TypeScript):**
+
 ```typescript
 import React from 'react';
 
@@ -268,14 +286,14 @@ Edit `src/config/package-mappings.ts` to add new package strategies:
 ```typescript
 export const packageStrategies = {
   eliminate: {
-    'your_package': true,
+    your_package: true,
   },
   replace: {
-    'old_package': {
+    old_package: {
       replacement: 'new-package',
-      reason: 'Better alternative available'
-    }
-  }
+      reason: 'Better alternative available',
+    },
+  },
 };
 ```
 
@@ -289,6 +307,7 @@ export const packageStrategies = {
 ## 🐛 Troubleshooting
 
 ### AWS Credentials Not Working
+
 ```bash
 # Test AWS credentials
 aws sts get-caller-identity
@@ -297,12 +316,14 @@ aws sts get-caller-identity
 ```
 
 ### Out of Memory Errors
+
 ```bash
 # Increase Node.js memory limit
 NODE_OPTIONS="--max-old-space-size=8192" pnpm run convert large-project/
 ```
 
 ### Conversion Errors
+
 - Check `decisions/conversion-decisions.json` for detailed error logs
 - Run with `--no-llm` to disable AI features and use basic conversion
 - Use `--dry-run` to preview changes without modifying files

@@ -16,11 +16,13 @@ export class IntelligenceService {
   constructor() {
     this.client = new BedrockRuntimeClient({
       region: this.config.awsRegion,
-      credentials: this.config.awsAccessKeyId ? {
-        accessKeyId: this.config.awsAccessKeyId,
-        secretAccessKey: this.config.awsSecretAccessKey!,
-        sessionToken: this.config.awsSessionToken,
-      } : undefined,
+      credentials: this.config.awsAccessKeyId
+        ? {
+            accessKeyId: this.config.awsAccessKeyId,
+            secretAccessKey: this.config.awsSecretAccessKey!,
+            sessionToken: this.config.awsSessionToken,
+          }
+        : undefined,
     });
   }
 
@@ -81,7 +83,8 @@ export class IntelligenceService {
         usage: {
           inputTokens: responseBody.usage?.input_tokens || 0,
           outputTokens: responseBody.usage?.output_tokens || 0,
-          totalTokens: (responseBody.usage?.input_tokens || 0) + (responseBody.usage?.output_tokens || 0),
+          totalTokens:
+            (responseBody.usage?.input_tokens || 0) + (responseBody.usage?.output_tokens || 0),
         },
       };
     } catch (error) {
@@ -143,10 +146,11 @@ export class IntelligenceService {
     }
 
     // Check for complex patterns
-    const hasComplexPatterns = files.some(f =>
-      f.content.includes('mixin') ||
-      f.content.includes('abstract class') ||
-      f.content.includes('factory')
+    const hasComplexPatterns = files.some(
+      f =>
+        f.content.includes('mixin') ||
+        f.content.includes('abstract class') ||
+        f.content.includes('factory')
     );
 
     if (hasComplexPatterns) {
@@ -155,10 +159,11 @@ export class IntelligenceService {
     }
 
     // Check for heavy framework usage
-    const hasFrameworks = files.some(f =>
-      f.content.includes('over_react') ||
-      f.content.includes('angular_dart') ||
-      f.content.includes('flutter')
+    const hasFrameworks = files.some(
+      f =>
+        f.content.includes('over_react') ||
+        f.content.includes('angular_dart') ||
+        f.content.includes('flutter')
     );
 
     if (hasFrameworks) {

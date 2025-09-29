@@ -1,7 +1,5 @@
 export class Modernizer {
-  async modernize(
-    typescript: string
-  ): Promise<{ code: string; debtReduction: number }> {
+  async modernize(typescript: string): Promise<{ code: string; debtReduction: number }> {
     let code = typescript;
     let debtReduction = 0;
 
@@ -62,10 +60,7 @@ export class Modernizer {
 
     // Use array destructuring
     const arrayAccessPattern = /const\s+(\w+)\s*=\s*(\w+)\[0\];\s*const\s+(\w+)\s*=\s*\2\[1\]/g;
-    modernized = modernized.replace(
-      arrayAccessPattern,
-      'const [$1, $3] = $2'
-    );
+    modernized = modernized.replace(arrayAccessPattern, 'const [$1, $3] = $2');
 
     return { code: modernized, reduction };
   }
@@ -75,11 +70,9 @@ export class Modernizer {
     let modernized = code;
 
     // Use object destructuring
-    const objectAccessPattern = /const\s+(\w+)\s*=\s*(\w+)\.(\w+);\s*const\s+(\w+)\s*=\s*\2\.(\w+)/g;
-    modernized = modernized.replace(
-      objectAccessPattern,
-      'const { $3: $1, $5: $4 } = $2'
-    );
+    const objectAccessPattern =
+      /const\s+(\w+)\s*=\s*(\w+)\.(\w+);\s*const\s+(\w+)\s*=\s*\2\.(\w+)/g;
+    modernized = modernized.replace(objectAccessPattern, 'const { $3: $1, $5: $4 } = $2');
 
     // Use object shorthand
     const objectLiteralPattern = /{\s*(\w+):\s*\1\s*}/g;
