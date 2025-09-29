@@ -229,12 +229,13 @@ export class ConversionOrchestrator {
           code = code.replace(match[0], `// Inlined: ${importPath}`);
           break;
 
-        case 'preserve':
+        case 'preserve': {
           // Keep the import but convert to TypeScript style
           const tsImport = this.convertToTypeScriptImport(importPath);
           code = code.replace(match[0], tsImport);
           imports.push(this.extractModuleName(importPath));
           break;
+        }
       }
     }
 

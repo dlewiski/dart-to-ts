@@ -169,7 +169,7 @@ function extractLibraryName(content: string): string | undefined {
   return libraryMatch ? libraryMatch[1] : undefined;
 }
 
-function printAnalysisSummary(summary: any, verbose: boolean) {
+function printAnalysisSummary(summary: any, _verbose: boolean) {
   console.log('\n' + chalk.cyan('═'.repeat(60)));
   console.log(chalk.cyan.bold('📊 Project Analysis Summary'));
   console.log(chalk.cyan('═'.repeat(60)));

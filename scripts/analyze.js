@@ -131,7 +131,7 @@ function extractLibraryName(content) {
     const libraryMatch = content.match(/library\s+(\w+);/);
     return libraryMatch ? libraryMatch[1] : undefined;
 }
-function printAnalysisSummary(summary, _verbose) {
+function printAnalysisSummary(summary) {
     console.log('\n' + chalk.cyan('═'.repeat(60)));
     console.log(chalk.cyan.bold('📊 Project Analysis Summary'));
     console.log(chalk.cyan('═'.repeat(60)));
